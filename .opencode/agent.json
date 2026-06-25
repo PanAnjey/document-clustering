@@ -1,0 +1,8 @@
+{
+  "context_files": [
+    {
+      "path": "SESSION_CONTEXT.md",
+      "description": "Контекст сессии для кластеризации документов"
+    }
+  ]
+}

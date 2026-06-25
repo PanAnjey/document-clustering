@@ -1,0 +1,131 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Cluster Pipeline" [level=1] [ref=e5]
+      - text: File Organizer
+    - generic [ref=e6]:
+      - link "Dashboard" [ref=e7] [cursor=pointer]:
+        - /url: "#"
+      - link "Stages" [ref=e8] [cursor=pointer]:
+        - /url: "#"
+      - link "Config" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "Logs" [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "Results" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+    - generic [ref=e12]:
+      - button "Start Pipeline" [ref=e13] [cursor=pointer]
+      - button "Force Unlock" [ref=e27] [cursor=pointer]
+      - separator [ref=e14]
+      - button "Summarize Only (LLM)" [ref=e15] [cursor=pointer]
+  - generic [ref=e17]:
+    - generic [ref=e28]:
+      - generic [ref=e167]:
+        - generic [ref=e168]: Source Files
+        - generic [ref=e169]: "1955"
+      - generic [ref=e170]:
+        - generic [ref=e171]: Processed
+        - generic [ref=e172]: "0"
+      - generic [ref=e173]:
+        - generic [ref=e174]: Errors
+        - generic [ref=e175]: "3"
+      - generic [ref=e176]:
+        - generic [ref=e177]: Clusters
+        - generic [ref=e178]: "0"
+      - generic [ref=e179]:
+        - generic [ref=e180]: Sorted Files
+        - generic [ref=e181]: "56047"
+      - generic [ref=e182]:
+        - generic [ref=e183]: Text Embeddings
+        - generic [ref=e184]: "0"
+      - generic [ref=e185]:
+        - generic [ref=e186]: Image Embeddings
+        - generic [ref=e187]: "0"
+      - generic [ref=e188]:
+        - generic [ref=e189]: PDF Text
+        - generic [ref=e190]: "1211"
+      - generic [ref=e191]:
+        - generic [ref=e192]: PDF Scan
+        - generic [ref=e193]: "1975"
+      - generic [ref=e194]:
+        - generic [ref=e195]: PDF Tables
+        - generic [ref=e196]: "20969"
+      - generic [ref=e197]:
+        - generic [ref=e198]: Word Docx
+        - generic [ref=e199]: "1811"
+      - generic [ref=e200]:
+        - generic [ref=e201]: Word Doc
+        - generic [ref=e202]: "629"
+      - generic [ref=e203]:
+        - generic [ref=e204]: Word Rtf
+        - generic [ref=e205]: "72"
+      - generic [ref=e206]:
+        - generic [ref=e207]: Word Txt
+        - generic [ref=e208]: "7"
+      - generic [ref=e209]:
+        - generic [ref=e210]: Word Odt
+        - generic [ref=e211]: "13"
+      - generic [ref=e212]:
+        - generic [ref=e213]: Excel Xlsx
+        - generic [ref=e214]: "3483"
+      - generic [ref=e215]:
+        - generic [ref=e216]: Excel Csv
+        - generic [ref=e217]: "354"
+      - generic [ref=e218]:
+        - generic [ref=e219]: Excel Ods
+        - generic [ref=e220]: "4"
+      - generic [ref=e221]:
+        - generic [ref=e222]: Image Jpg
+        - generic [ref=e223]: "205"
+      - generic [ref=e224]:
+        - generic [ref=e225]: Image Png
+        - generic [ref=e226]: "13"
+      - generic [ref=e227]:
+        - generic [ref=e228]: Image Bmp
+        - generic [ref=e229]: "2"
+      - generic [ref=e230]:
+        - generic [ref=e231]: Image Tiff
+        - generic [ref=e232]: "3"
+      - generic [ref=e233]:
+        - generic [ref=e234]: XML Xml
+        - generic [ref=e235]: "1141"
+    - generic [ref=e18]:
+      - generic [ref=e19]: Progress
+      - generic [ref=e22]: "Resume from: stage_1_sort (0/3)"
+    - generic [ref=e23]:
+      - generic [ref=e24]: Recent Logs
+      - generic [ref=e26]:
+        - generic [ref=e236]: 09:15:06 - INFO - ============================================================
+        - generic [ref=e237]: 09:15:06 - INFO - FILE ORGANIZER PIPELINE v5.0
+        - generic [ref=e238]: 09:15:06 - INFO - ============================================================
+        - generic [ref=e239]: 09:15:06 - INFO -
+        - generic [ref=e240]: "09:15:06 - INFO - STAGE 1: SORTING FILES"
+        - generic [ref=e241]: 09:15:06 - INFO - ============================================================
+        - generic [ref=e242]: "09:15:06 - INFO - Найдено элементов: 1955"
+        - generic [ref=e243]: "09:15:06 - INFO - Файлов: 1955"
+        - generic [ref=e244]: 09:15:06 - INFO - Запуск сортировки в 16 процессов...
+        - generic [ref=e245]: "09:15:06 - INFO - Сортировка: 97/1955"
+        - generic [ref=e246]: "09:15:06 - INFO - Сортировка: 194/1955"
+        - generic [ref=e247]: "09:15:06 - INFO - Сортировка: 291/1955"
+        - generic [ref=e248]: "09:15:06 - INFO - Сортировка: 388/1955"
+        - generic [ref=e249]: "09:15:06 - INFO - Сортировка: 485/1955"
+        - generic [ref=e250]: "09:15:06 - INFO - Сортировка: 582/1955"
+        - generic [ref=e251]: "09:15:06 - INFO - Сортировка: 679/1955"
+        - generic [ref=e252]: "09:15:06 - INFO - Сортировка: 776/1955"
+        - generic [ref=e253]: "09:15:06 - INFO - Сортировка: 873/1955"
+        - generic [ref=e254]: "09:15:06 - INFO - Сортировка: 970/1955"
+        - generic [ref=e255]: "09:15:06 - INFO - Сортировка: 1067/1955"
+        - generic [ref=e256]: "09:15:06 - INFO - Сортировка: 1164/1955"
+        - generic [ref=e257]: "09:15:06 - INFO - Сортировка: 1261/1955"
+        - generic [ref=e258]: "09:15:06 - INFO - Сортировка: 1358/1955"
+        - generic [ref=e259]: "09:15:06 - INFO - Сортировка: 1455/1955"
+        - generic [ref=e260]: "09:15:06 - INFO - Сортировка: 1552/1955"
+        - generic [ref=e261]: "09:15:06 - INFO - Сортировка: 1649/1955"
+        - generic [ref=e262]: "09:15:06 - INFO - Сортировка: 1746/1955"
+        - generic [ref=e263]: "09:15:06 - INFO - Сортировка: 1843/1955"
+        - generic [ref=e264]: "09:15:06 - INFO - Сортировка: 1940/1955"
+        - generic [ref=e265]: "09:15:06 - INFO - Сортировка: 1955/1955"
+        - generic [ref=e266]: "09:15:06 - INFO - Сортировка завершена: 0 OK, 1955 ошибок"
+        - generic [ref=e267]: 09:15:06 - WARNING - Ни один файл не был отсорирован.
+        - generic [ref=e268]: 09:15:06 - WARNING - Нет файлов для обработки на этапе 1.

@@ -1,0 +1,49 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Cluster Pipeline" [level=1] [ref=e5]
+      - text: File Organizer
+    - generic [ref=e6]:
+      - link "Dashboard" [ref=e7] [cursor=pointer]:
+        - /url: "#"
+      - link "Stages" [active] [ref=e8] [cursor=pointer]:
+        - /url: "#"
+      - link "Config" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+      - link "Logs" [ref=e10] [cursor=pointer]:
+        - /url: "#"
+      - link "Results" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+    - generic [ref=e12]:
+      - button "Start Pipeline" [ref=e13] [cursor=pointer]
+      - button "Force Unlock" [ref=e27] [cursor=pointer]
+      - separator [ref=e14]
+      - button "Summarize Only (LLM)" [ref=e15] [cursor=pointer]
+  - generic [ref=e29]:
+    - generic [ref=e30]:
+      - text: Pipeline Stages
+      - generic [ref=e31]:
+        - button "Refresh" [ref=e32] [cursor=pointer]
+        - button "Full Reset" [ref=e33] [cursor=pointer]
+        - button "Test Reset" [ref=e34] [cursor=pointer]
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: "1"
+        - generic [ref=e38]:
+          - generic [ref=e39]: Сортировка файлов
+          - generic [ref=e40]: —
+        - generic [ref=e41]:
+          - generic [ref=e42]: Next
+          - button "Rollback from here" [ref=e43] [cursor=pointer]
+      - generic [ref=e44]:
+        - generic [ref=e45]: "2"
+        - generic [ref=e46]:
+          - generic [ref=e47]: Обработка форматов
+          - generic [ref=e48]: —
+        - generic [ref=e50]: Pending
+      - generic [ref=e51]:
+        - generic [ref=e52]: "3"
+        - generic [ref=e53]:
+          - generic [ref=e54]: Кластеризация и уточнение (LLM)
+          - generic [ref=e55]: —
+        - generic [ref=e57]: Pending
