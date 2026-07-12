@@ -1,0 +1,6 @@
+{
+  "gpu":          {"slots": 1, "description": "LLM self-summary + embeddings (cuda:0 Qwen + cuda:1 nomic). Один таск за раз — не играться с VRAM."},
+  "extractors":   {"slots": 1, "description": "CPU-bound extract (Aspose/Pandoc/COM/Tesseract/PyMuPDF). Строго один подэтап за раз (по конвенции _stage2_busy)."},
+  "clustering":   {"slots": 1, "description": "HDBSCAN/кластеризация + LLM refinement кластеров."},
+  "preflight":    {"slots": 4, "description": "Pre-flight проверки зависимостей (CPU)."}
+}
