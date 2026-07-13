@@ -1,0 +1,5 @@
+# Секреты и runtime-артефакты Docker — не в git
+.env
+logs/
+plugins/
+config/

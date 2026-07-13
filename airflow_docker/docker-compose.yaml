@@ -1,0 +1,136 @@
+# =============================================================================
+# Airflow в Docker — исследовательский стенд кластеризации документов
+# =============================================================================
+# Топология: Airflow (Linux-контейнеры) → SSH → Windows-хост (host.docker.internal),
+# где живут GPU / venv D:\VENV\LLM / PostgreSQL / COM / Aspose.
+#
+# Executor = LocalExecutor (без Celery/Redis): вся тяжёлая работа уходит по SSH
+# на Windows, контейнерам нужен только парсинг DAG + запуск SSH/Postgres-операторов.
+#
+# Метаданные Airflow — в отдельном postgres-контейнере (НЕ путать с
+# file_organizer_db на Windows-хосте, где лежат экспериментальные данные).
+#
+# Запуск:
+#   1. cp .env.example .env  (заполнить AIRFLOW_CONN_WINDOWS_SSH секретом)
+#   2. docker compose up airflow-init      # разовая инициализация БД + импорт pools/vars
+#   3. docker compose up -d                # поднять scheduler + webserver
+#   4. http://localhost:8080  (admin / admin по умолчанию)
+#
+# Остановка:  docker compose down
+# Полный сброс метаданных: docker compose down -v
+# =============================================================================
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.10.5-python3.11
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-metadb/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.session"
+    # Провайдеры ssh + postgres уже входят в штатный образ apache/airflow:2.10.5,
+    # поэтому доп. установка не нужна. Если понадобится доустановить пакеты —
+    # перечислить их здесь через пробел (медленнее старт) или собрать
+    # кастомный образ Dockerfile'ом (лучше для прода).
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    # Подключение к Windows-хосту по SSH (host.docker.internal) — задаётся в .env
+    AIRFLOW_CONN_WINDOWS_SSH: ${AIRFLOW_CONN_WINDOWS_SSH}
+    # Подключение к PostgreSQL с экспериментальными данными на Windows-хосте
+    AIRFLOW_CONN_POSTGRES_EXPERIMENTS: ${AIRFLOW_CONN_POSTGRES_EXPERIMENTS}
+  volumes:
+    # DAG-и монтируются из проекта (только чтение внутри контейнера)
+    - ../airflow/dags:/opt/airflow/dags:ro
+    # pools.json / variables_default.json для импорта на init
+    - ../airflow_setup:/opt/airflow/setup:ro
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./config:/opt/airflow/config
+  # Доступ к сервисам Windows-хоста (sshd:22, postgres:5432) из контейнера
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on: &airflow-common-depends-on
+    airflow-metadb:
+      condition: service_healthy
+
+services:
+  # --- Метаданные Airflow (отдельный Postgres, не трогает file_organizer_db) ---
+  airflow-metadb:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-metadb-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # --- Разовая инициализация: миграция БД + admin-юзер + импорт pools/variables ---
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+        echo "=== airflow db migrate ==="
+        airflow db migrate
+        echo "=== create admin user ==="
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME:-admin}" \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD:-admin}" \
+          --firstname Admin --lastname User --role Admin \
+          --email admin@example.com || true
+        echo "=== import pools ==="
+        airflow pools import /opt/airflow/setup/pools.json || true
+        echo "=== import variables ==="
+        airflow variables import /opt/airflow/setup/variables_default.json || true
+        echo "=== init done ==="
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+    restart: "no"
+
+  # --- Scheduler ---
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  # --- Webserver (UI на :8080) ---
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  airflow-metadb-data:
