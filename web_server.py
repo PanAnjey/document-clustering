@@ -4,6 +4,8 @@
 
 import asyncio
 import json
+import multiprocessing
+import os
 import threading
 import time
 import traceback
@@ -14,6 +16,7 @@ import logging
 from logger_utils import logger
 import uvicorn
 from starlette.applications import Starlette
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Route
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
@@ -23,13 +26,18 @@ from pipeline_progress import progress
 try:
     import summarize_only
 except ImportError:
-    # Phase 1 (PDF PoC): summarize_only не требуется
     class _DummySummarizeOnly:
         stop_event = None
         def run_summarize_sync(self): return {"ok": False, "error": "summarize_only not found"}
     summarize_only = _DummySummarizeOnly()
 
 pipeline = PipelineState()
+
+DATA_DIR = cfg.ROOT / "PipelineData"
+RESET_STATUS_FILE = DATA_DIR / "reset_status.json"
+PIPELINE_STATUS_FILE = DATA_DIR / "pipeline_status.json"
+STOP_FLAG_FILE = DATA_DIR / "stop.flag"
+CONFIRM_FLAG_FILE = DATA_DIR / "confirm.flag"
 
 _pipeline_thread: Optional[threading.Thread] = None
 _pipeline_running = False
@@ -40,6 +48,138 @@ _log_buffer: list = []
 _summarize_thread: Optional[threading.Thread] = None
 _summarize_running = False
 _summarize_error: Optional[str] = None
+
+_reset_process: Optional[threading.Thread] = None
+_reset_running = False
+_reset_error: Optional[str] = None
+_reset_last_log: str = ""
+
+_pipeline_process: Optional[multiprocessing.Process] = None
+
+
+# ===== Helpers: file-based IPC for subprocess tasks =====
+
+def _read_status(path: Path) -> dict:
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {"running": False, "error": None, "last_log": ""}
+
+def _write_status(path: Path, data: dict):
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception as e:
+        logger.warning(f"Failed to write status file {path}: {e}")
+
+def _read_pipeline_running() -> bool:
+    return _read_status(PIPELINE_STATUS_FILE).get("running", False)
+
+def _write_pipeline_running(val: bool):
+    data = _read_status(PIPELINE_STATUS_FILE)
+    data["running"] = val
+    if not val:
+        data["error"] = None
+        _remove_stop_flag()
+    _write_status(PIPELINE_STATUS_FILE, data)
+
+def _set_pipeline_error(err: str):
+    data = _read_status(PIPELINE_STATUS_FILE)
+    data["running"] = False
+    data["error"] = err
+    _remove_stop_flag()
+    _write_status(PIPELINE_STATUS_FILE, data)
+
+def _set_stop_flag():
+    STOP_FLAG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STOP_FLAG_FILE.write_text("1")
+
+def _remove_stop_flag():
+    if STOP_FLAG_FILE.exists():
+        STOP_FLAG_FILE.unlink()
+
+def _set_confirm_flag():
+    CONFIRM_FLAG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CONFIRM_FLAG_FILE.write_text("1")
+
+def _remove_confirm_flag():
+    if CONFIRM_FLAG_FILE.exists():
+        CONFIRM_FLAG_FILE.unlink()
+
+def _wait_confirm_flag(timeout: float = 1.0) -> bool:
+    deadline = time.time() + 100  # 100 sec max
+    while time.time() < deadline:
+        if CONFIRM_FLAG_FILE.exists():
+            return True
+        time.sleep(timeout)
+    return False
+
+def _is_stopped() -> bool:
+    return STOP_FLAG_FILE.exists()
+
+
+# ===== Subprocess workers =====
+
+def _reset_worker(test_mode: bool, status_path: str):
+    """Full reset worker — runs in separate process, no GIL blocking."""
+    import json as _json
+    from pathlib import Path as _Path
+    sp = _Path(status_path)
+    def _w(d):
+        try:
+            sp.parent.mkdir(parents=True, exist_ok=True)
+            with open(sp, 'w', encoding='utf-8') as f:
+                _json.dump(d, f, ensure_ascii=False)
+        except Exception:
+            pass
+    try:
+        _w({"running": True, "error": None, "last_log": "Starting reset..."})
+        from pipeline_state import PipelineState as PS
+        ps = PS()
+        _w({"running": True, "error": None, "last_log": "Clearing database..."})
+        ps.full_reset(test_mode=test_mode)
+        _w({"running": False, "error": None, "last_log": "Reset finished successfully"})
+    except Exception as e:
+        _w({"running": False, "error": str(e), "last_log": f"Reset failed: {e}"})
+
+
+def _pipeline_worker(status_path: str, stop_path: str, confirm_path: str):
+    """Pipeline worker — runs in separate process."""
+    try:
+        import asyncio as _aio
+        from main import run_pipeline
+
+        # Patch stop_event and confirmation
+        import main as _main_mod
+        _main_mod.stop_event = type('FakeEvent', (), {'is_set': lambda: os.path.exists(stop_path), 'set': lambda: None, 'clear': lambda: None, 'wait': lambda s, timeout=1.0: os.path.exists(stop_path)})()
+
+        # Patch confirmation event
+        _main_mod._stage_confirmation_event = type('FakeEvent', (), {
+            'set': lambda: open(confirm_path, 'w').write('1') if not None else None,
+            'clear': lambda: os.remove(confirm_path) if os.path.exists(confirm_path) else None,
+            'wait': lambda s, timeout=1.0: _wait_confirm_file(confirm_path, timeout),
+            'is_set': lambda: os.path.exists(confirm_path),
+        })()
+
+        _aio.run(run_pipeline())
+        _write_status(Path(status_path), {"running": False, "error": None, "last_log": "Pipeline completed"})
+    except Exception as e:
+        _write_status(Path(status_path), {"running": False, "error": str(e), "last_log": f"Pipeline failed: {e}"})
+    finally:
+        for p in [Path(stop_path), Path(confirm_path)]:
+            if p.exists():
+                p.unlink()
+
+
+def _wait_confirm_file(path: str, timeout: float) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if os.path.exists(path):
+            return True
+        time.sleep(0.1)
+    return False
 
 def _get_stop_event():
     from main import stop_event
@@ -726,7 +866,15 @@ async function loadConfig() {
   });
 }
 
-function toggleBool(cb) {}
+function toggleBool(cb) {
+    const key = cb.dataset.key;
+    if (key) {
+        const input = document.querySelector(`input[data-key="${key}"]`);
+        if (input && input.type === 'hidden') {
+            input.value = cb.checked ? 'true' : 'false';
+        }
+    }
+}
 
 async function saveConfig() {
   const inputs = document.querySelectorAll('#config-list input[data-key]');
@@ -905,9 +1053,12 @@ async function rollbackStage(n) {
 }
 
 async function fullReset(testMode) {
+  console.log('fullReset called, testMode=' + testMode);
   const label = testMode ? 'TEST reset (21 files from SourceFiles_test.rar)?' : 'Full reset (all data deleted, source files restored from SourceFiles.rar)?';
-  if (!confirm(label)) return;
+  if (!confirm(label)) { console.log('Reset cancelled by user'); return; }
+  console.log('Reset confirmed');
   const statusEl = document.getElementById('rollback-status');
+  if (!statusEl) { alert('Status element not found'); return; }
   statusEl.style.display = 'block';
   statusEl.style.background = 'var(--surface2)';
   statusEl.style.color = 'var(--accent)';
@@ -916,23 +1067,47 @@ async function fullReset(testMode) {
   statusEl.style.marginBottom = '12px';
   statusEl.style.fontSize = '13px';
   statusEl.textContent = testMode ? 'Resetting with test data...' : 'Resetting all pipeline data...';
+  console.log('Status element updated, sending request...');
   try {
     const url = testMode ? '/api/pipeline/reset?test=1' : '/api/pipeline/reset';
+    console.log('POST ' + url);
     const r = await fetch(url, {method: 'POST'});
+    console.log('Response status: ' + r.status);
     const resp = await r.json();
-    if (resp.ok) {
-      statusEl.style.background = 'rgba(74,222,128,0.12)';
-      statusEl.style.color = 'var(--green)';
-      statusEl.textContent = testMode
-        ? 'Test reset complete! 21 test files restored from SourceFiles_test.rar.'
-        : 'Full reset complete! All data deleted, source files restored from archive.';
-      refreshStages();
-      loadDashboard();
-    } else {
+    if (!resp.ok) {
       statusEl.style.background = 'rgba(248,113,113,0.12)';
       statusEl.style.color = 'var(--red)';
       statusEl.textContent = 'Reset error: ' + (resp.error || 'unknown');
+      return;
     }
+    // poll reset status
+    const poll = setInterval(async () => {
+      try {
+        const s = await fetch('/api/pipeline/reset/status').then(x => x.json());
+        statusEl.textContent = s.last_log || (s.running ? 'Reset in progress...' : 'Reset finished');
+        if (!s.running) {
+          clearInterval(poll);
+          if (s.error) {
+            statusEl.style.background = 'rgba(248,113,113,0.12)';
+            statusEl.style.color = 'var(--red)';
+            statusEl.textContent = 'Reset error: ' + s.error;
+          } else {
+            statusEl.style.background = 'rgba(74,222,128,0.12)';
+            statusEl.style.color = 'var(--green)';
+            statusEl.textContent = testMode
+              ? 'Test reset complete! 21 test files restored from SourceFiles_test.rar.'
+              : 'Full reset complete! All data deleted, source files restored from archive.';
+          }
+          refreshStages();
+          loadDashboard();
+        }
+      } catch (e) {
+        clearInterval(poll);
+        statusEl.style.background = 'rgba(248,113,113,0.12)';
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = 'Reset status poll failed: ' + e.message;
+      }
+    }, 1000);
   } catch (e) {
     statusEl.style.background = 'rgba(248,113,113,0.12)';
     statusEl.style.color = 'var(--red)';
@@ -1010,7 +1185,7 @@ async def api_status(request):
 
     return JSONResponse({
         "stages": stages_info,
-        "running": _pipeline_running,
+        "running": _pipeline_running or _read_pipeline_running(),
         "error": _pipeline_error,
         "resume_from": resume_from,
         "awaiting_confirmation": _awaiting_confirmation,
@@ -1355,12 +1530,14 @@ def _save_config_to_file(updates: dict):
 
 async def api_pipeline_start(request):
     global _pipeline_running, _pipeline_error
-    if _pipeline_running:
+    if _pipeline_running or _read_pipeline_running():
         return JSONResponse({"ok": False, "error": "Pipeline is already running"})
 
     _pipeline_running = True
     _pipeline_error = None
-    _get_stop_event().clear()
+    _remove_stop_flag()
+    _remove_confirm_flag()
+    _write_pipeline_running(True)
 
     def run():
         global _pipeline_running, _pipeline_error
@@ -1372,16 +1549,19 @@ async def api_pipeline_start(request):
             _pipeline_error = str(e)
         finally:
             _pipeline_running = False
+            _write_pipeline_running(False)
+            _remove_stop_flag()
+            _remove_confirm_flag()
 
     t = threading.Thread(target=run, daemon=True)
     t.start()
+    logger.info("Pipeline thread started")
 
     return JSONResponse({"ok": True})
 
 
 async def api_pipeline_stop(request):
-    global _pipeline_running
-    _get_stop_event().set()
+    _set_stop_flag()
     return JSONResponse({"ok": True})
 
 
@@ -1389,15 +1569,14 @@ async def api_pipeline_unlock(request):
     global _pipeline_running, _pipeline_error
     _pipeline_running = False
     _pipeline_error = None
-    _get_stop_event().clear()
+    _remove_stop_flag()
+    _remove_confirm_flag()
+    _write_pipeline_running(False)
     return JSONResponse({"ok": True})
 
 
 async def api_pipeline_confirm(request):
-    from main import _awaiting_confirmation, confirm_next_stage
-    if not _awaiting_confirmation:
-        return JSONResponse({"ok": False, "error": "Pipeline is not awaiting confirmation"})
-    confirm_next_stage()
+    _set_confirm_flag()
     return JSONResponse({"ok": True})
 
 
@@ -1420,11 +1599,31 @@ async def api_substage_start(request):
         active = list(s2._stage2_active) if s2._stage2_active else None
         return JSONResponse({"ok": False, "error": f"Подэтап уже выполняется: {active}"})
 
-    # Запускаем пайплайн, если он не работает (резюм с этапа 2)
-    if not _pipeline_running:
-        await api_pipeline_start(request)
+    # Запускаем пайплайн, если он не работает.
+    if not _pipeline_running and not _read_pipeline_running():
+        resp = await api_pipeline_start(request)
+        if isinstance(resp, JSONResponse):
+            try:
+                data = json.loads(resp.body)
+                if not data.get("ok", True):
+                    return resp
+            except Exception:
+                pass
 
-    # Отправляем запрос на запуск подэтапа
+    # Ждём, пока пайплайн дойдёт до ожидания выбора подэтапа (макс 120 сек).
+    # Если отправить подэтап ДО этого — он уйдёт в _pending_substage и повиснет,
+    # если пайплайн уже успел пройти проверку _pending_substage (race condition).
+    for _ in range(240):
+        if s2._awaiting_substage_select:
+            break
+        await asyncio.sleep(0.5)
+
+    if not s2._awaiting_substage_select:
+        return JSONResponse({"ok": False, "error":
+            "Пайплайн не дошёл до этапа 2 за 120 сек. "
+            "Проверьте логи — возможно, этап 1 не выполнен или произошла ошибка."})
+
+    # Пайплайн ждёт выбора — отправляем немедленно
     ok = s2.select_substage_to_start(fmt, sub)
     if not ok:
         return JSONResponse({"ok": False, "error": "Недопустимый выбор (формат неизвестен или подэтап заблокирован)"})
@@ -1485,14 +1684,16 @@ async def api_substage_rollback(request):
 
 
 async def api_substage_stop(request):
-    """Остановка текущего выполняющегося подэтапа (через общий stop_event)."""
+    """Остановка текущего выполняющегося подэтапа."""
+    from stages import stage2_processing as s2
     _get_stop_event().set()
+    s2._stage2_busy = False
     return JSONResponse({"ok": True})
 
 
 async def api_pipeline_rollback(request):
     global _pipeline_running
-    if _pipeline_running:
+    if _pipeline_running or _read_pipeline_running():
         return JSONResponse({"ok": False, "error": "Pipeline is running, cannot rollback"})
 
     stage_num = int(request.query_params.get("stage", "1"))
@@ -1516,30 +1717,80 @@ async def api_pipeline_rollback(request):
 
 
 async def api_pipeline_reset(request):
-    global _pipeline_running
+    global _reset_process, _reset_running
+    # Only block if there is an actively running pipeline THREAD in this process.
+    # Stale pipeline_status.json is ignored — reset is a destructive override that
+    # clears all state unconditionally.
     if _pipeline_running:
         return JSONResponse({"ok": False, "error": "Pipeline is running, cannot reset"})
+    # Clear any stale pipeline/stop/confirm flags before starting the reset.
+    _write_pipeline_running(False)
+    _remove_stop_flag()
+    _remove_confirm_flag()
+
+    # Derive running state from the actual process so a stale flag can't block forever.
+    _reset_running = bool(_reset_process and _reset_process.is_alive())
+    if _reset_running:
+        return JSONResponse({"ok": False, "error": "Reset is already running"})
 
     test_mode = request.query_params.get("test", "").lower() in ("1", "true", "yes")
-    result = {"ok": False, "error": "", "test_mode": test_mode}
+    logger.info(f"Full reset requested (test_mode={test_mode})")
 
-    def do_reset():
-        try:
-            pipeline.full_reset(test_mode=test_mode)
-            result["ok"] = True
-        except Exception as e:
-            result["error"] = str(e)
+    _reset_running = True
+    _write_status(RESET_STATUS_FILE, {"running": True, "error": None, "last_log": "Reset started..."})
 
-    import concurrent.futures
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, do_reset)
+    # Run in a daemon thread (same process) instead of a separate process, so that
+    # full_reset's log messages propagate to the web server's logger -> console and
+    # the web UI Logs panel (LogCapture). full_reset is I/O-bound (taskkill, unrar,
+    # file deletion, DB via its own pooled connection), so it does not block the
+    # event loop in a meaningful way. Mirrors the pipeline, which also runs in a thread.
+    _reset_process = threading.Thread(
+        target=_reset_worker,
+        args=(test_mode, str(RESET_STATUS_FILE)),
+        daemon=True,
+    )
+    _reset_process.start()
+    logger.info("Reset thread started")
 
-    return JSONResponse(result)
+    return JSONResponse({"ok": True, "message": "Reset started", "test_mode": test_mode})
+
+
+async def api_pipeline_reset_status(request):
+    global _reset_running
+    data = _read_status(RESET_STATUS_FILE)
+
+    # full_reset() deletes the whole PipelineData directory (including RESET_STATUS_FILE)
+    # in the middle of the reset, so the status file is temporarily absent while files are
+    # still being restored. Therefore the reset THREAD's liveness — not the (possibly
+    # deleted) status file — is the source of truth for whether the reset is still running.
+    # This guarantees "Reset complete" is reported only after the thread (and thus the full
+    # restore from the archive) has actually finished.
+    thread_alive = bool(_reset_process and _reset_process.is_alive())
+
+    if thread_alive:
+        _reset_running = True
+        last_log = data.get("last_log") or "Reset in progress..."
+        return JSONResponse({
+            "ok": True,
+            "running": True,
+            "error": None,
+            "last_log": last_log,
+        })
+
+    # Thread has finished (or none started). The worker rewrites the status file with the
+    # final result at the very end, so trust it now.
+    _reset_running = False
+    return JSONResponse({
+        "ok": True,
+        "running": False,
+        "error": data.get("error"),
+        "last_log": data.get("last_log", ""),
+    })
 
 
 async def api_summarize_start(request):
     global _summarize_running, _summarize_error, _summarize_thread
-    if _pipeline_running:
+    if _pipeline_running or _read_pipeline_running():
         return JSONResponse({"ok": False, "error": "Pipeline is running, cannot start standalone summarize"})
     if _summarize_running:
         return JSONResponse({"ok": False, "error": "Summarize already running"})
@@ -1617,6 +1868,7 @@ def _init_extraction_groups():
     if not pipeline.is_completed("stage_1_sort"):
         return
     
+    saved = pipeline.load_stage2_groups() or {}
     sorted_data = pipeline.load_data("stage_1_sort")
     if not sorted_data:
         # Нет сохранённых данных — загружаем из Sorted директорий напрямую
@@ -1627,28 +1879,92 @@ def _init_extraction_groups():
                 for f in d.rglob("*"):
                     if f.is_file():
                         sorted_data.append({"source": str(f), "type": fmt})
+        # Также сканируем FailedExtraction и ErrorFiles — иначе формат, у которого все
+        # файлы ушли в ошибки, не получит группы, и откатить его будет невозможно.
+        # Определяем format_type через БД (документы там хранят свой тип).
+        seen_formats: set = set()
+        try:
+            from database import DatabaseManager
+            db = DatabaseManager()
+            with db.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DISTINCT format_type FROM documents
+                    WHERE file_path ILIKE '%\\FailedExtraction\\%'
+                       OR file_path ILIKE '%\\ErrorFiles\\%'
+                """)
+                for row in cur.fetchall():
+                    fmt = row[0]
+                    if fmt and fmt not in seen_formats:
+                        seen_formats.add(fmt)
+                        # Добавляем заглушку — файлы уже есть в БД, в группе достаточно
+                        # записи чтобы кнопка Rollback появилась.
+                        sorted_data.append({"source": None, "type": fmt})
+            db.close()
+        except Exception as e:
+            logger.warning(f"Не удалось получить форматы из FailedExtraction/ErrorFiles: {e}")
+        # Для форматов, которые есть в сохранённом состоянии, но не представлены
+        # ни одним файлом в Sorted/Failed/Error — создаём пустые группы (чтобы
+        # кнопка Rollback была доступна).
+        for fmt, sg in saved.items():
+            if fmt not in seen_formats and sg.get("extract") in ("completed", "rolled_back", "running"):
+                # Создаём запись-заглушку: 0 файлов, но с сохранённым статусом
+                sorted_data.append({"source": None, "type": fmt})
+                seen_formats.add(fmt)
         if not sorted_data:
             return
     
     s2._prepare_extraction_groups(sorted_data)
     groups = s2._extraction_groups
-    print(f"Инициализировано {len(groups)} групп для этапа 2")
+    # Сбрасываем total для групп, созданных из заглушек (source=None)
+    for g in groups:
+        if g["total"] > 0:
+            real_files = sum(1 for item in sorted_data
+                            if item["type"] == g["type"] and item["source"] is not None)
+            if real_files < g["total"]:
+                g["total"] = real_files
+    logger.info(f"Инициализировано {len(groups)} групп для этапа 2")
     
     # Восстанавливаем сохранённые под-статусы substage
-    saved = pipeline.load_stage2_groups()
     if saved:
         for g in groups:
             fmt = g["type"]
             if fmt in saved:
                 sg = saved[fmt]
-                g["extract_status"] = sg.get("extract", "pending")
-                g["embed_status"] = sg.get("embed", "locked")
+                # Если статус был "running" при сохранении — после перезагрузки
+                # сервера/интерфейса процесс извлечения уже не работает.
+                # Меняем на "stopped", чтобы пользователь мог перезапустить.
+                raw_extract = sg.get("extract", "pending")
+                if raw_extract == "running":
+                    raw_extract = "stopped"
+                g["extract_status"] = raw_extract
+                raw_embed = sg.get("embed", "locked")
+                if raw_embed == "running":
+                    raw_embed = "stopped"
+                g["embed_status"] = raw_embed
                 g["extract_ok"] = sg.get("extract_stats", {}).get("ok", 0)
                 g["extract_errors"] = sg.get("extract_stats", {}).get("errors", 0)
                 g["extract_elapsed"] = sg.get("extract_stats", {}).get("elapsed", 0.0)
                 g["embed_ok"] = sg.get("embed_stats", {}).get("ok", 0)
                 g["embed_errors"] = sg.get("embed_stats", {}).get("errors", 0)
                 g["embed_elapsed"] = sg.get("embed_stats", {}).get("elapsed", 0.0)
+        # Форматы из сохранённого состояния, которых нет в группах (пустые заглушки),
+        # уже должны быть — но на всякий случай добавляем недостающие.
+        for fmt, sg in saved.items():
+            if not any(g["type"] == fmt for g in groups):
+                from stages.stage2_processing import _format_has_extraction
+                he = _format_has_extraction(fmt)
+                groups.append({
+                    "type": fmt, "total": 0, "workers": 4,
+                    "has_extraction": he,
+                    "extract_status": sg.get("extract", "pending"),
+                    "embed_status": sg.get("embed", "locked"),
+                    "extract_ok": sg.get("extract_stats", {}).get("ok", 0),
+                    "extract_errors": sg.get("extract_stats", {}).get("errors", 0),
+                    "extract_elapsed": sg.get("extract_stats", {}).get("elapsed", 0.0),
+                    "embed_ok": sg.get("embed_stats", {}).get("ok", 0),
+                    "embed_errors": sg.get("embed_stats", {}).get("errors", 0),
+                    "embed_elapsed": sg.get("embed_stats", {}).get("elapsed", 0.0),
+                })
     
     all_done = all(
         g["embed_status"] in ("completed", "skipped")
@@ -1687,6 +2003,7 @@ app = Starlette(routes=[
     Route("/api/pipeline/confirm", api_pipeline_confirm, methods=["POST"]),
     Route("/api/pipeline/rollback", api_pipeline_rollback, methods=["POST"]),
     Route("/api/pipeline/reset", api_pipeline_reset, methods=["POST"]),
+    Route("/api/pipeline/reset/status", api_pipeline_reset_status, methods=["GET"]),
     Route("/api/substage/start", api_substage_start, methods=["POST"]),
     Route("/api/substage/rollback", api_substage_rollback, methods=["POST"]),
     Route("/api/substage/stop", api_substage_stop, methods=["POST"]),
@@ -1696,6 +2013,14 @@ app = Starlette(routes=[
     Route("/api/logs/stream", api_logs_stream),
     Route("/api/logs", api_logs),
 ], lifespan=lifespan)
+
+# Логирование всех HTTP-запросов
+class _RequestLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        logger.info(f"HTTP {request.method} {request.url.path}")
+        return await call_next(request)
+
+app.add_middleware(_RequestLogMiddleware)
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):

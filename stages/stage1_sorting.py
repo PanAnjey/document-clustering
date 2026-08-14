@@ -18,14 +18,23 @@ from logger_utils import logger
 
 def _sort_worker(f: Path) -> Optional[Dict]:
     """Worker для multiprocessing: сортирует один файл, возвращает dict с source/type или None."""
-    import sys
-    sys.path.insert(0, r"D:\Yandex.Disk\PYTHON\NLTK\Кластеризация")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from sorting import pdf_processor, text_processor, excel_processor, image_processor, xml_processor
-
-    ext = f.suffix.lower()
+    from sorting.verify_signature import rename_by_signature
 
     try:
-        # Dispatch to format-specific processors
+        # Проверка сигнатуры — переименование если расширение не соответствует содержимому
+        f, sig_category = rename_by_signature(f)
+
+        # Ошибочные файлы (PKCS#7, неизвестная сигнатура) — сразу в ErrorFiles
+        if sig_category == 'error':
+            from file_processor import move_file_to_error
+            move_file_to_error(f)
+            return None
+
+        # Диспетчер по расширению (теперь проверенному)
+        ext = f.suffix.lower()
+
         if ext == '.pdf':
             result = pdf_processor.process_pdf(f)
         elif ext in ('.docx', '.doc', '.rtf', '.txt', '.odt', '.odp'):
@@ -37,36 +46,10 @@ def _sort_worker(f: Path) -> Optional[Dict]:
         elif ext in ('.xml', '.xsd', '.xsl', '.xslt', '.wsdl'):
             result = xml_processor.process_xml(f)
         else:
-            # Unknown format — try signature detection
-            import file_processor
-            result = file_processor.detect_file_type_by_signature(f)
-            if not result:
-                file_processor.move_file_to_error(f)
-                return None
-            detected_ext, cat = result
-            new_path = f.with_suffix(detected_ext)
-            try:
-                f.rename(new_path)
-            except Exception:
-                new_path = f
-            moved = file_processor.move_file_to_target(new_path, cat)
-            if not moved:
-                return None
-            # PDF classification
-            if cat == "pdf":
-                subcat = file_processor.classify_pdf(moved)
-                sorted_dir = cfg.TARGETS.get(subcat)
-                if sorted_dir:
-                    sorted_dir.mkdir(parents=True, exist_ok=True)
-                    dst = sorted_dir / moved.name
-                    cnt = 1
-                    while dst.exists():
-                        dst = sorted_dir / f"{moved.stem}_{cnt}{moved.suffix}"
-                        cnt += 1
-                    shutil.move(str(moved), str(dst))
-                    moved = dst
-                    cat = subcat
-            return {"source": str(moved), "type": cat}
+            # Неизвестное расширение после проверки сигнатуры — в ErrorFiles
+            from file_processor import move_file_to_error
+            move_file_to_error(f)
+            return None
 
         if result:
             new_path, cat = result
@@ -87,7 +70,8 @@ def _sort_worker(f: Path) -> Optional[Dict]:
             return {"source": str(new_path), "type": cat}
         return None
 
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Sort worker error for {f.name}: {e}")
         return None
 
 
@@ -135,24 +119,66 @@ async def run_stage_1_sort() -> List[Dict]:
         logger.error("Нет файлов для обработки.")
         return []
 
-    num_workers = min(cfg.MAX_CONCURRENT_FILES, len(files))
-    logger.info(f"Запуск сортировки в {num_workers} процессов...")
+    # ШАГ 1: Архивы — обрабатываются ДО пула (последовательно, с общим отчётом)
+    from sorting.archive_processor import process_archives, ARCHIVE_EXTS
+    archive_files = [f for f in files if f.suffix.lower() in ARCHIVE_EXTS or str(f).endswith('.tar.gz')]
+    non_archive_files = [f for f in files if f not in archive_files]
 
     loop = asyncio.get_running_loop()
-    sorted_files = await loop.run_in_executor(None, _run_sort_pool, files, num_workers)
+    archive_results = await loop.run_in_executor(None, process_archives, source_path)
+    sorted_files = list(archive_results)
+
+    # ШАГ 2: Остальные файлы — параллельная сортировка в пуле
+    if non_archive_files:
+        num_workers = min(cfg.MAX_CONCURRENT_FILES, len(non_archive_files))
+        logger.info(f"Запуск сортировки {len(non_archive_files)} файлов в {num_workers} процессов...")
+
+        pool_results = await loop.run_in_executor(None, _run_sort_pool, non_archive_files, num_workers)
+        sorted_files.extend(pool_results)
 
     if not sorted_files:
-        logger.warning("Ни один файл не был отсорирован.")
+        logger.warning("Ни один файл не был отсортирован.")
         return []
 
+    db = None
     try:
         db = DatabaseManager()
         records = [(d["source"], d["type"]) for d in sorted_files]
         db.insert_documents_batch(records)
-        db.close()
         logger.info(f"Сохранено {len(sorted_files)} документов в БД.")
     except Exception as e:
         logger.error(f"БД недоступна, данные сохранены только в памяти: {e}")
+    finally:
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
 
     logger.info(f"Этап 1 завершён. Отсортировано: {len(sorted_files)} файлов.")
+
+    # Очистка пустых поддиректорий в Sorted/
+    _cleanup_empty_dirs()
+
     return sorted_files
+
+
+def _cleanup_empty_dirs():
+    """Удаляет пустые поддиректории в Sorted/ — остаются только те, где есть файлы."""
+    sorted_root = cfg.ROOT / "Sorted"
+    if not sorted_root.exists():
+        return
+
+    removed = 0
+    # Проходим снизу вверх (post-order) — сначала внутренние, потом внешние
+    for d in sorted(sorted_root.rglob("*"), key=lambda x: len(x.parts), reverse=True):
+        if d.is_dir():
+            try:
+                next(d.iterdir())
+            except StopIteration:
+                d.rmdir()
+                removed += 1
+                logger.debug(f"Удалена пустая директория: {d}")
+
+    if removed:
+        logger.info(f"Удалено пустых директорий: {removed}")

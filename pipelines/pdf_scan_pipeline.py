@@ -44,7 +44,7 @@ class PdfScanPipeline(BasePipeline):
         result['image'] = str(image_path)
 
         # 2. Tesseract OSD — определение ориентации
-        self._fix_orientation(image_path)
+        # self._fix_orientation(image_path)
 
         # 3. Tesseract OCR
         text = self._extract_text_tesseract(image_path)
@@ -64,18 +64,14 @@ class PdfScanPipeline(BasePipeline):
     # ---- Image generation ----
 
     def _generate_first_page_image(self, pdf_path: Path) -> Optional[str]:
-        """Генерация PNG первой страницы PDF."""
+        """Генерация PNG первой страницы PDF с коррекцией ошибочного /Rotate.
+
+        Использует utils.rotate_fix.render_pdf_first_page_upright() —
+        для сканов с /Rotate != 0 проверяет Tesseract OSD и при ошибочном
+        /Rotate повторно рендерит без применения поворота.
+        """
         try:
-            import fitz
-
-            doc = fitz.open(str(pdf_path))
-            if doc.page_count == 0:
-                doc.close()
-                return None
-
-            page = doc.load_page(0)
-            mat = fitz.Matrix(2, 2)
-            pix = page.get_pixmap(matrix=mat)
+            from utils.rotate_fix import render_pdf_first_page_upright
 
             img_dir = cfg.EXTRA['pdf_images']
             img_dir.mkdir(parents=True, exist_ok=True)
@@ -88,9 +84,10 @@ class PdfScanPipeline(BasePipeline):
                 img_path = img_dir / f"{pdf_path.stem}_{cnt}.png"
                 cnt += 1
 
-            pix.save(str(img_path))
-            doc.close()
-            return str(img_path)
+            result = render_pdf_first_page_upright(pdf_path, img_path, zoom=2.0)
+            if result is None:
+                logger.warning(f"Image generation failed for {pdf_path.name}")
+            return result
 
         except Exception as e:
             logger.warning(f"Image generation failed for {pdf_path.name}: {e}")

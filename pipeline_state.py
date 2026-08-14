@@ -133,9 +133,14 @@ class PipelineState:
                 content = self.state_file.read_text(encoding='utf-8').strip()
                 if content:
                     return json.loads(content)
-            except (json.JSONDecodeError, OSError):
-                logger.warning(f"State file corrupted or empty, resetting: {self.state_file}")
-                self.state_file.unlink(missing_ok=True)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(f"State file corrupted or empty, resetting: {self.state_file} ({e})")
+                backup_path = self.state_file.with_suffix('.json.bak')
+                try:
+                    self.state_file.rename(backup_path)
+                    logger.info(f"Corrupted state file backed up to {backup_path}")
+                except Exception:
+                    self.state_file.unlink(missing_ok=True)
         return {"stages": {}, "created": datetime.now().isoformat()}
 
     def _save_state(self, state: dict):
@@ -416,7 +421,10 @@ class PipelineState:
         logger.info(f"Откат этапа: {stage} ({STAGE_LABELS[stage]})")
 
         if stage == "stage_1_sort":
-            for target_dir in cfg.TARGETS.values():
+            all_target_dirs = set(cfg.TARGETS.values())
+            for rel in cfg.FORMAT_TARGETS.values():
+                all_target_dirs.add(cfg.ROOT / rel)
+            for target_dir in all_target_dirs:
                 if target_dir.exists():
                     file_count = 0
                     for f in target_dir.rglob("*"):
@@ -581,6 +589,13 @@ class PipelineState:
     def full_reset(self, test_mode: bool = False):
         logger.info("Начат полный сброс пайплайна")
 
+        rar_path = cfg.SOURCE_RAR_TEST if test_mode else cfg.SOURCE_RAR
+        if not rar_path.exists():
+            raise FileNotFoundError(
+                f"Архив не найден: {rar_path}. "
+                f"Full reset отменён, чтобы не удалить исходные файлы."
+            )
+
         try:
             from database import DatabaseManager
             db = DatabaseManager()
@@ -589,17 +604,16 @@ class PipelineState:
             logger.info("  БД полностью очищена")
         except Exception as e:
             logger.warning(f"  Не удалось очистить БД: {e}")
-            print(f"  Не удалось очистить БД: {e}")
 
         logger.info("  Закрытие процессов LibreOffice/Office...")
         try:
-            subprocess.run(['taskkill', '/F', '/IM', 'soffice.exe'], 
+            subprocess.run(['taskkill', '/F', '/IM', 'soffice.exe'],
                          capture_output=True, timeout=5)
-            subprocess.run(['taskkill', '/F', '/IM', 'soffice.bin'], 
+            subprocess.run(['taskkill', '/F', '/IM', 'soffice.bin'],
                          capture_output=True, timeout=5)
-            subprocess.run(['taskkill', '/F', '/IM', 'WINWORD.EXE'], 
+            subprocess.run(['taskkill', '/F', '/IM', 'WINWORD.EXE'],
                          capture_output=True, timeout=5)
-            subprocess.run(['taskkill', '/F', '/IM', 'EXCEL.EXE'], 
+            subprocess.run(['taskkill', '/F', '/IM', 'EXCEL.EXE'],
                          capture_output=True, timeout=5)
             time.sleep(1)
         except Exception as e:
@@ -634,32 +648,27 @@ class PipelineState:
 
         for d in dirs_to_delete:
             try:
-                file_count = sum(1 for _ in d.rglob("*") if _.is_file())
                 if _force_remove_dir(d):
-                    logger.info(f"  Удалено: {d} ({file_count} файлов)")
+                    logger.info(f"  Удалено: {d}")
                 else:
                     logger.warning(f"  Не удалось полностью удалить: {d}")
-                    print(f"  Не удалось полностью удалить: {d}")
             except Exception as e:
                 logger.error(f"  Ошибка удаления {d}: {e}")
-                print(f"  Ошибка удаления {d}: {e}")
 
         report = cfg.ROOT / "report.txt"
         if report.exists():
             report.unlink()
             logger.info(f"  Удалено: {report}")
 
-        rar_path = cfg.SOURCE_RAR_TEST if test_mode else cfg.SOURCE_RAR
         rar_label = "тестового" if test_mode else "продакшен"
         logger.info(f"  Восстановление исходных файлов из {rar_label} архива...")
         restored = self._restore_from_rar(rar_path)
         if restored:
             logger.info(f"  Восстановлено файлов из архива: {restored}")
         else:
-            logger.warning("  Не удалось восстановить из архива (файл не найден или ошибка)")
-            print("  Не удалось восстановить из архива (файл не найден или ошибка)")
+            raise RuntimeError("Не удалось восстановить исходные файлы из архива")
 
-        print("Полный сброс завершён.")
+        logger.info("Полный сброс завершён.")
 
     def _restore_from_rar(self, rar_path: Path = None) -> int:
         if rar_path is None:

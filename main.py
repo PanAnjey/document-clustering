@@ -9,11 +9,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import time
-import os
 import sys
 import threading
-from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Optional, List
 
 from config import cfg
 from logger_utils import logger
@@ -28,6 +26,11 @@ pipeline = PipelineState()
 start_time: int = 0
 stop_event = threading.Event()
 progress = get_progress_tracker()
+_stop_flag_file = cfg.ROOT / "PipelineData" / "stop.flag"
+
+
+def _is_stopped() -> bool:
+    return stop_event.is_set() or _stop_flag_file.exists()
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -41,31 +44,28 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 def wait_for_confirmation(stage_label: str) -> bool:
     """Ожидание подтверждения через web-интерфейс."""
-    global _awaiting_confirmation, _current_stage_completed, _stage_confirmation_event
-    
+    global _awaiting_confirmation, _current_stage_completed
+
     _awaiting_confirmation = True
     _current_stage_completed = stage_label
-    _stage_confirmation_event.clear()
-    
+
     logger.info(f"Ожидание подтверждения для продолжения после этапа: {stage_label}")
-    print(f"\n  >>> Ожидание подтверждения через web-интерфейс...")
-    
-    while not _stage_confirmation_event.is_set():
-        if stop_event.is_set():
+    print("\n  >>> Ожидание подтверждения через web-интерфейс...")
+
+    while not _stage_confirmation_event.wait(timeout=1.0):
+        if _is_stopped():
             _awaiting_confirmation = False
             _current_stage_completed = None
             return False
-        _stage_confirmation_event.wait(timeout=1.0)
-    
+
     _awaiting_confirmation = False
     _current_stage_completed = None
-    logger.info(f"Подтверждение получено, продолжаем пайплайн.")
+    logger.info("Подтверждение получено, продолжаем пайплайн.")
     return True
 
 
 def confirm_next_stage():
     """Установка флага подтверждения (вызывается из web-интерфейса)."""
-    global _stage_confirmation_event
     _stage_confirmation_event.set()
 
 
@@ -82,8 +82,8 @@ async def run_pipeline() -> int:
 
 async def main(args: argparse.Namespace) -> int:
     """Основная функция запуска пайплайна."""
-    global start_time, stop_event
-    
+    global start_time
+
     start_time = time.time()
     
     logger.info("=" * 60)
@@ -91,6 +91,9 @@ async def main(args: argparse.Namespace) -> int:
     logger.info("=" * 60)
     
     try:
+        sorted_data = None
+        processed_data = None
+
         # Этап 1: Сортировка файлов
         if args.stage is None or args.stage == 1:
             logger.info("\n" + "=" * 60)
@@ -101,7 +104,6 @@ async def main(args: argparse.Namespace) -> int:
             
             if not sorted_data:
                 logger.warning("Нет файлов для обработки на этапе 1.")
-                # Проверяем, есть ли уже отсортированные файлы (предыдущий запуск)
                 sorted_dirs = [cfg.ROOT / v for v in cfg.FORMAT_TARGETS.values()]
                 has_sorted = any(d.exists() and any(d.iterdir()) for d in sorted_dirs)
                 if not has_sorted:
@@ -112,11 +114,15 @@ async def main(args: argparse.Namespace) -> int:
             pipeline.save_data("stage_1_sort", sorted_data or [])
             
             if args.stage == 1:
-                logger.info(f"Этап 1 завершен. Файлов отсортировано: {len(sorted_data)}")
+                logger.info(f"Этап 1 завершен. Файлов отсортировано: {len(sorted_data or [])}")
                 return 0
         
         # Этап 2: Обработка форматов (извлечение + эмбеддинги)
         if args.stage is None or args.stage == 2:
+            if sorted_data is None:
+                sorted_data = pipeline.load_data("stage_1_sort") or []
+                logger.info(f"Загружены данные этапа 1 из сохранённого состояния: {len(sorted_data)} файлов")
+
             logger.info("\n" + "=" * 60)
             logger.info("STAGE 2: PROCESSING FORMATS")
             logger.info("=" * 60)
@@ -126,11 +132,15 @@ async def main(args: argparse.Namespace) -> int:
             pipeline.mark_completed("stage_2_process_formats")
             
             if args.stage == 2:
-                logger.info(f"Этап 2 завершен. Обработано документов: {len(processed_data)}")
+                logger.info(f"Этап 2 завершен. Обработано документов: {len(processed_data or [])}")
                 return 0
         
         # Этап 3: Кластеризация и уточнение (LLM)
         if args.stage is None or args.stage == 3:
+            if processed_data is None:
+                processed_data = pipeline.load_data("stage_2_process_formats") or []
+                logger.info(f"Загружены данные этапа 2 из сохранённого состояния: {len(processed_data)} документов")
+
             logger.info("\n" + "=" * 60)
             logger.info("STAGE 3: CLUSTERING & REFINEMENT")
             logger.info("=" * 60)
@@ -140,7 +150,7 @@ async def main(args: argparse.Namespace) -> int:
             pipeline.mark_completed("stage_3_cluster_refine")
             
             if args.stage == 3:
-                logger.info(f"Этап 3 завершен. Кластеров создано: {len(clustered_data)}")
+                logger.info(f"Этап 3 завершен. Кластеров создано: {len(clustered_data or [])}")
                 return 0
         
         # Общий тайминг

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from config import cfg
-from file_processor import is_opendocument_xml, move_file_to_error, move_file_to_target
+from file_processor import is_opendocument_xml, move_file_to_error
 from logger_utils import logger
 
 
@@ -36,10 +36,10 @@ def process_xml(file_path: Path) -> Optional[Tuple[Path, str]]:
         return None
 
     try:
-        # 1. OpenDocument XML → выносится в text_processor
+        # 1. OpenDocument XML → делегируем text_processor
         if is_opendocument_xml(file_path):
-            logger.debug(f"ODF XML пропущен (обработается как ODT/ODS): {file_path.name}")
-            return None
+            from sorting import text_processor
+            return text_processor.process_text(file_path)
 
         # 2. Перемещаем в Sorted/XML_{ext}
         format_type = XML_EXT_MAP[ext]

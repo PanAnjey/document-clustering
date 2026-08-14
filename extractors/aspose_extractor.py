@@ -3,9 +3,9 @@
 
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
-_aspose: Optional["AsposeWords"] = None
+_aspose: Optional[Any] = None
 _ASPOSE_AVAILABLE = True
 
 

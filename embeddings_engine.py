@@ -10,6 +10,7 @@ os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 import torch
+import threading
 from transformers import AutoModel, AutoTokenizer, CLIPImageProcessor, PreTrainedModel
 from PIL import Image
 from typing import List, Optional
@@ -230,7 +231,7 @@ class EmbeddingEngine:
                 with torch.no_grad():
                     inputs = self.text_tokenizer(
                         batch_texts, padding=True, truncation=True,
-                        max_length=8192, return_tensors="pt"
+                        max_length=2048, return_tensors="pt"
                     ).to(self.device)
                     outputs = self.text_model(**inputs)
                     embeddings = _mean_pool(outputs.last_hidden_state, inputs["attention_mask"])
@@ -239,20 +240,22 @@ class EmbeddingEngine:
 
                 for i, name in enumerate(batch_names):
                     safe_name = Path(name).stem
-                    np.save(save_dir / f"{safe_name}_text.npy", batch_emb[i])
+                    np.save(save_dir / f"{safe_name}_{start + i}_text.npy", batch_emb[i])
 
                 all_embeddings.append(batch_emb)
             except Exception as e:
                 logger.error(f"Text batch {start}-{end} error: {e}")
+                batch_fallback = np.zeros((len(batch_names), cfg.EMB_DIMENSION), dtype=np.float32)
                 for i in range(len(batch_names)):
                     try:
                         single = self.compute_text_embedding(texts[start + i])
                         if single is not None:
                             safe_name = Path(batch_names[i]).stem
-                            np.save(save_dir / f"{safe_name}_text.npy", single)
-                            all_embeddings.append(single.reshape(1, -1))
+                            np.save(save_dir / f"{safe_name}_{start + i}_text.npy", single)
+                            batch_fallback[i] = single
                     except Exception as e2:
                         logger.error(f"Fallback text embedding error for {batch_names[i]}: {e2}")
+                all_embeddings.append(batch_fallback)
 
             if (start // batch_size) % 3 == 0:
                 logger.info(f"Text embeddings: {end}/{len(texts)}")
@@ -313,7 +316,7 @@ class EmbeddingEngine:
 
                 for local_i, global_i in enumerate(valid_indices):
                     safe_name = Path(batch_names[global_i]).stem
-                    np.save(save_dir / f"{safe_name}_image.npy", batch_emb[local_i])
+                    np.save(save_dir / f"{safe_name}_{start + global_i}_image.npy", batch_emb[local_i])
 
                 # Восстанавливаем полный массив: zero-вектор для упавших изображений
                 full_batch = np.zeros((len(batch_paths), dim))
@@ -328,7 +331,7 @@ class EmbeddingEngine:
                         single = self.compute_image_embedding(batch_paths[i])
                         if single is not None:
                             safe_name = Path(batch_names[i]).stem
-                            np.save(save_dir / f"{safe_name}_image.npy", single)
+                            np.save(save_dir / f"{safe_name}_{start + i}_image.npy", single)
                             all_embeddings[-1][i] = single
                     except Exception as e2:
                         logger.error(f"Fallback image embedding error for {batch_names[i]}: {e2}")
@@ -342,13 +345,15 @@ class EmbeddingEngine:
 
 
 _engine_instance = None
+_engine_lock = threading.Lock()
 
 
 def get_engine() -> EmbeddingEngine:
     global _engine_instance
-    if _engine_instance is None:
-        _engine_instance = EmbeddingEngine()
-        _engine_instance.load_models()
+    with _engine_lock:
+        if _engine_instance is None:
+            _engine_instance = EmbeddingEngine()
+            _engine_instance.load_models()
     return _engine_instance
 
 

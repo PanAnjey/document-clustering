@@ -1,12 +1,11 @@
 # extractors/__init__.py
 # Модуль извлечения текста для различных форматов файлов
 
-import os
 import shutil
 import struct
 import zipfile
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple
 
 from config import cfg
 from logger_utils import logger
@@ -17,6 +16,9 @@ from .pdf_extractor import extract_pdf
 from .image_extractor import extract_image
 from .xml_extractor import extract_xml
 from .pandoc_extractor import extract_with_pandoc
+from .docx_extractor import extract_docx
+from .rtf_extractor import extract_rtf
+from .olefile_extractor import extract_doc_olefile
 
 # Сигнатуры файлов: (смещение, байты, расширение, категория)
 MAGIC_SIGNATURES = [
@@ -67,8 +69,13 @@ def _detect_zip_subtype(path: Path) -> Optional[Tuple[str, str]]:
                     ct = zf.read('[Content_Types].xml').decode('utf-8', errors='replace')
                     for mime, cat in ZIP_MIMETYPES.items():
                         if mime in ct:
-                            ext = '.docx' if cat == 'word' else '.xlsx'
-                            return (ext, cat)
+                            ext_map = {
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+                                'application/vnd.oasis.opendocument.text': '.odt',
+                                'application/vnd.oasis.opendocument.spreadsheet': '.ods',
+                            }
+                            return (ext_map.get(mime, '.zip'), cat)
                 except Exception:
                     pass
 
@@ -79,10 +86,15 @@ def _detect_zip_subtype(path: Path) -> Optional[Tuple[str, str]]:
             if 'mimetype' in names:
                 try:
                     mime = zf.read('mimetype').decode('utf-8', errors='replace').strip()
+                    ext_map = {
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+                        'application/vnd.oasis.opendocument.text': '.odt',
+                        'application/vnd.oasis.opendocument.spreadsheet': '.ods',
+                    }
                     for m, cat in ZIP_MIMETYPES.items():
                         if m in mime:
-                            ext = '.docx' if cat == 'word' else '.xlsx'
-                            return (ext, cat)
+                            return (ext_map.get(m, '.zip'), cat)
                 except Exception:
                     pass
 
@@ -102,37 +114,57 @@ def _detect_zip_subtype(path: Path) -> Optional[Tuple[str, str]]:
 
 
 def _detect_ole2_subtype(path: Path) -> Optional[Tuple[str, str]]:
+    """Определяет подтип OLE2: doc, xls, ppt.
+
+    Fast path — поиск по байтам в первых 64 КБ файла (быстро, ~100x быстрее olefile).
+    Slow path — olefile.listdir() для редких файлов, где имена потоков за пределами 64 КБ.
+    """
     try:
         size = path.stat().st_size
         if size < 512:
             return None
 
-        with open(path, 'rb') as f:
-            f.seek(512)
-            sector = f.read(512)
-
-        prop_start = struct.unpack_from('<I', sector, 0)[0] if len(sector) >= 4 else 0
-
-        OLE_STREAM_NAMES = {
-            'Workbook':          ('.xls',   'excel'),
-            'Book':              ('.xls',   'excel'),
-            'WordDocument':     ('.doc',   'word'),
-            '1Table':            ('.doc',   'word'),
-            '0Table':            ('.doc',   'word'),
-            'PowerPoint Document': ('.ppt', 'word'),
-            'Current User':      None,
-        }
-
+        # Fast path: байтовый поиск UTF-16 LE имён потоков в первых 64 КБ
         try:
             with open(path, 'rb') as f:
-                data = f.read(min(size, 8192))
-            for name, result in OLE_STREAM_NAMES.items():
-                if result and name.encode('utf-16-le', errors='replace') in data:
+                data = f.read(min(size, 65536))
+
+            if 'Workbook'.encode('utf-16-le') in data:
+                return ('.xls', 'excel')
+            if 'WordDocument'.encode('utf-16-le') in data:
+                return ('.doc', 'word')
+            if 'Book'.encode('utf-16-le') in data:
+                return ('.xls', 'excel')
+            if 'PowerPoint Document'.encode('utf-16-le') in data:
+                return ('.ppt', 'word')
+            if '1Table'.encode('utf-16-le') in data or '0Table'.encode('utf-16-le') in data:
+                return ('.doc', 'word')
+            if '_xlwd.MSExcelWorkspace'.encode('utf-16-le') in data:
+                return ('.xls', 'excel')
+        except Exception:
+            pass
+
+        # Slow path: olefile для файлов, где потоки за пределами 64 КБ
+        try:
+            import olefile
+            ole = olefile.OleFileIO(str(path))
+            stream_names = ole.listdir()
+            ole.close()
+
+            name_set = {entry[-1] for entry in stream_names if entry}
+            for name, result in (('Workbook', ('.xls', 'excel')),
+                                 ('Book', ('.xls', 'excel')),
+                                 ('_xlwd.MSExcelWorkspace', ('.xls', 'excel')),
+                                 ('WordDocument', ('.doc', 'word')),
+                                 ('1Table', ('.doc', 'word')),
+                                 ('0Table', ('.doc', 'word')),
+                                 ('PowerPoint Document', ('.ppt', 'word'))):
+                if name in name_set:
                     return result
         except Exception:
             pass
 
-        return ('.doc', 'word')
+        return None
     except Exception:
         return None
 
@@ -146,7 +178,9 @@ def _detect_riff_subtype(path: Path) -> Optional[Tuple[str, str]]:
             return ('.webp', 'image')
         if subtype == b'AVI ':
             return ('.avi', None)
-        return ('.avi', None)
+        if subtype == b'WAVE':
+            return ('.wav', None)
+        return None
     except Exception:
         return None
 
@@ -314,17 +348,24 @@ def process_file(file_path: Path, file_type: str) -> Dict:
 
     # 2. Fallback по расширению (для форматов без регистрации)
     ext = file_path.suffix.lower()
-    
+
     if ext == ".txt":
         return extract_txt(file_path)
     elif ext == ".csv":
         return extract_csv(file_path)
     elif ext == ".rtf":
-        return _error_result(file_path, "rtf", "RTF without registered pipeline")
+        return extract_rtf(file_path)
     elif ext == ".doc":
-        return _error_result(file_path, "doc", "DOC without registered pipeline")
+        # Цепочка: olefile -> COM Word
+        result = extract_doc_olefile(file_path)
+        if result and result.get('text'):
+            return result
+        if cfg.COM_ENABLED:
+            from .office_com_extractor import extract_word_com
+            return extract_word_com(file_path)
+        return result
     elif ext == ".docx":
-        return _error_result(file_path, "docx", "DOCX without registered pipeline")
+        return extract_docx(file_path)
     elif ext == ".pdf":
         return extract_pdf(file_path)
     elif ext in (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tif", ".tiff", ".webp"):
@@ -332,15 +373,24 @@ def process_file(file_path: Path, file_type: str) -> Dict:
     elif ext in (".xml", ".xsd", ".xsl", ".xslt", ".wsdl"):
         return extract_xml(file_path)
     elif ext == ".odt":
-        return _error_result(file_path, "odt", "ODT without registered pipeline")
-    elif ext == ".ods":
-        return extract_xml(file_path)
-    elif ext == ".odp":
-        return extract_xml(file_path)
-    elif ext in (".xls", ".xlsx", ".xlsm", ".xlsb"):
-        result = extract_with_pandoc(file_path, "xlsx")
+        result = extract_with_pandoc(file_path, "odt")
         if result and result.get('text'):
             return result
+        if cfg.COM_ENABLED:
+            from .office_com_extractor import extract_word_com
+            return extract_word_com(file_path)
+        return _error_result(file_path, "odt", "ODT extraction failed")
+    elif ext == ".ods":
+        result = extract_with_pandoc(file_path, "ods")
+        if result and result.get('text'):
+            return result
+        return extract_excel(file_path)
+    elif ext == ".odp":
+        result = extract_with_pandoc(file_path, "odp")
+        if result and result.get('text'):
+            return result
+        return _error_result(file_path, "odp", "ODP extraction failed")
+    elif ext in (".xls", ".xlsx", ".xlsm", ".xlsb"):
         return extract_excel(file_path)
     
     return {

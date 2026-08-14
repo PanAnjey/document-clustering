@@ -3,7 +3,7 @@
 # Оставлены: парсинг вывода, БД, общие утилиты GPU.
 
 import asyncio
-import time
+from collections import defaultdict
 from typing import List, Dict, Optional, Tuple, Set
 from pathlib import Path
 
@@ -152,7 +152,7 @@ def _parse_summary(llm_output: str, original_text: str) -> Tuple[str, Optional[s
 
     if not topic and not doc_type:
         logger.warning(f"No tags parsed from LLM response. Raw (first 300 chars): {llm_output[:300]}")
-        return llm_output + "\n" + original_text, None, None, purpose
+        return original_text, None, None, purpose
 
     return enriched, topic, doc_type, purpose
 
@@ -327,6 +327,59 @@ async def _summarize_batch_hf(file_data: List[Dict], texts: List[str],
         f"Total in DB: {already + success_count}."
     )
     return file_data
+
+
+def summarize_cluster(cluster_docs: List[Dict], topic_name: str, cluster_id: int) -> str:
+    """Генерирует краткое описание кластера на основе его документов.
+
+    Если доступен LM Studio, пробуем получить описание через LLM.
+    В случае ошибки или недоступности — возвращаем статистическое описание.
+    """
+    if not cluster_docs:
+        return f"{topic_name} (cluster {cluster_id})"
+
+    # Статистическое описание (fallback)
+    doc_types: Dict[str, int] = defaultdict(int)
+    topics: Dict[str, int] = defaultdict(int)
+    purposes: Dict[str, int] = defaultdict(int)
+    for d in cluster_docs:
+        if d.get("doc_type"):
+            doc_types[str(d["doc_type"])] += 1
+        if d.get("topic"):
+            topics[str(d["topic"])] += 1
+        if d.get("purpose"):
+            purposes[str(d["purpose"])] += 1
+
+    parts = [f"Тема: {topic_name}"]
+    if topics:
+        top_topic = max(topics.items(), key=lambda x: x[1])[0]
+        parts.append(f"подтема: {top_topic}")
+    if doc_types:
+        top_type = max(doc_types.items(), key=lambda x: x[1])[0]
+        parts.append(f"тип: {top_type}")
+    if purposes:
+        top_purpose = max(purposes.items(), key=lambda x: x[1])[0]
+        parts.append(f"назначение: {top_purpose}")
+    parts.append(f"документов: {len(cluster_docs)}")
+
+    summary = "; ".join(parts)
+
+    # Пробуем уточнить через LM Studio если доступен
+    try:
+        from lmstudio_client import refine_cluster
+        snippets = []
+        for d in cluster_docs[:10]:
+            text = d.get("text") or d.get("enriched_text") or ""
+            if text:
+                snippets.append(text[:300])
+        if snippets:
+            llm_summary = refine_cluster(snippets, topic_name)
+            if llm_summary:
+                return llm_summary
+    except Exception as e:
+        logger.debug(f"LM Studio cluster refinement failed: {e}")
+
+    return summary
 
 
 async def summarize_batch(file_data: List[Dict]) -> List[Dict]:

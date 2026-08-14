@@ -5,7 +5,8 @@
 #            v3.0: Расширенная таблица documents, инкрементальное сохранение по этапам,
 #                  resume для этапов 3 и 4, батчевые операции.
 
-import psycopg2
+import threading
+
 from psycopg2 import pool as pg_pool
 from psycopg2.extras import execute_values
 from pgvector.psycopg2 import register_vector
@@ -20,25 +21,32 @@ _connection_pool: Optional[pg_pool.ThreadedConnectionPool] = None
 _db_instance: Optional["DatabaseManager"] = None
 
 
+# RLock (reentrant): get_db() holds this lock and then constructs DatabaseManager(),
+# which calls _get_pool() that re-acquires the same lock. A plain Lock would self-deadlock
+# the calling thread (and, in the async web server, freeze the entire event loop).
+_pool_lock = threading.RLock()
+
 def _get_pool() -> pg_pool.ThreadedConnectionPool:
     global _connection_pool
-    if _connection_pool is None or _connection_pool.closed:
-        _connection_pool = pg_pool.ThreadedConnectionPool(
-            minconn=1,
-            maxconn=5,
-            host=cfg.PG_HOST,
-            port=cfg.PG_PORT,
-            database=cfg.PG_DB,
-            user=cfg.PG_USER,
-            password=cfg.PG_PASSWORD
-        )
+    with _pool_lock:
+        if _connection_pool is None or _connection_pool.closed:
+            _connection_pool = pg_pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=5,
+                host=cfg.PG_HOST,
+                port=cfg.PG_PORT,
+                database=cfg.PG_DB,
+                user=cfg.PG_USER,
+                password=cfg.PG_PASSWORD
+            )
     return _connection_pool
 
 
 def get_db() -> "DatabaseManager":
     global _db_instance
-    if _db_instance is None:
-        _db_instance = DatabaseManager()
+    with _pool_lock:
+        if _db_instance is None:
+            _db_instance = DatabaseManager()
     return _db_instance
 
 
@@ -60,8 +68,17 @@ class DatabaseManager:
             p = _get_pool()
             self.conn = p.getconn()
             self._from_pool = True
-            register_vector(self.conn)
-            self._create_tables()
+            try:
+                register_vector(self.conn)
+                self._create_tables()
+            except Exception:
+                try:
+                    p.putconn(self.conn)
+                except Exception:
+                    pass
+                self.conn = None
+                self._from_pool = False
+                raise
         except Exception as e:
             logger.critical(f"Failed to connect to DB: {e}")
             raise
@@ -183,7 +200,9 @@ class DatabaseManager:
         # Все поддерживаемые форматы (Phase 1 + Phase 2)
         all_formats = [
             # PDF
-            "pdf_text", "pdf_scan", "pdf_tables",
+            "pdf_text", "pdf_scan",
+            "pdf_tables", "pdf_tables_fin", "pdf_tables_tech",
+            "pdf_tables_contr", "pdf_tables_reports", "pdf_tables_other",
             # Word
             "word_docx", "word_doc", "word_rtf", "word_txt", "word_odt",
             # Excel
@@ -298,7 +317,7 @@ class DatabaseManager:
                 doc_id = cur.fetchone()[0]
                 self.conn.commit()
                 return doc_id
-        except Exception as e:
+        except Exception:
             self.conn.rollback()
             raise
 
@@ -322,7 +341,7 @@ class DatabaseManager:
                     WHERE file_path = %s;
                 """, (text, image_path, error, file_path))
                 self.conn.commit()
-        except Exception as e:
+        except Exception:
             self.conn.rollback()
             raise
 
@@ -396,7 +415,7 @@ class DatabaseManager:
                     WHERE file_path = %s;
                 """, (enriched_text, topic, doc_type, purpose, file_path))
                 self.conn.commit()
-        except Exception as e:
+        except Exception:
             self.conn.rollback()
             raise
 
@@ -446,25 +465,6 @@ class DatabaseManager:
             logger.info(f"Summary: {saved}/{len(records)} saved individually")
 
     # ===== Stage 4: Embeddings =====
-
-    def save_text_embedding(self, doc_id: int, embedding: np.ndarray):
-        if embedding is None:
-            return
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO text_embeddings (doc_id, embedding)
-                    VALUES (%s, %s)
-                    ON CONFLICT (doc_id) DO UPDATE SET embedding = EXCLUDED.embedding;
-                """, (doc_id, embedding))
-                cur.execute("""
-                    UPDATE documents SET text_embedded = TRUE, updated_at = NOW()
-                    WHERE id = %s;
-                """, (doc_id,))
-                self.conn.commit()
-        except Exception as e:
-            self.conn.rollback()
-            raise
 
     def save_text_embeddings_batch(self, records: List[tuple], format_type: str = None):
         if not records:
@@ -520,7 +520,7 @@ class DatabaseManager:
                     WHERE id = %s;
                 """, (doc_id,))
                 self.conn.commit()
-        except Exception as e:
+        except Exception:
             self.conn.rollback()
             raise
 
@@ -627,25 +627,23 @@ class DatabaseManager:
 
     def get_all_data_with_embeddings(self) -> List[Dict]:
         logger.info("Loading documents with embeddings from Database...")
+        data = []
         with self.conn.cursor() as cur:
             cur.execute("""
-                SELECT d.id, d.file_path, d.format_type,
-                       d.enriched_text as text, d.image_path,
-                       d.topic, d.doc_type, d.purpose, d.error,
-                       t.embedding as text_emb, i.embedding as img_emb
-                FROM documents d
-                LEFT JOIN text_embeddings t ON d.id = t.doc_id
-                LEFT JOIN image_embeddings i ON d.id = i.doc_id
-                WHERE d.stage_2_done = TRUE AND (d.error IS NULL OR d.error = '');
+                SELECT id, file_path, format_type,
+                       enriched_text, image_path,
+                       topic, doc_type, purpose, error
+                FROM documents
+                WHERE stage_2_done = TRUE AND (error IS NULL OR error = '');
             """)
             rows = cur.fetchall()
 
-        data = []
         for row in rows:
+            doc_id, file_path, format_type = row[0], row[1], row[2]
             item = {
-                "id": row[0],
-                "source": row[1],
-                "type": row[2],
+                "id": doc_id,
+                "source": file_path,
+                "type": format_type,
             }
             raw_text = row[3]
             item["text"] = raw_text if raw_text else ""
@@ -659,10 +657,28 @@ class DatabaseManager:
                 item["purpose"] = row[7]
             if row[8]:
                 item["error"] = row[8]
-            if row[9] is not None:
-                item["text_embedding"] = row[9]
-            if row[10] is not None:
-                item["image_embedding"] = row[10]
+
+            with self.conn.cursor() as cur:
+                text_table = self.get_embedding_table_name(format_type or "pdf_text", "text")
+                if text_table:
+                    try:
+                        cur.execute(f"SELECT embedding FROM {text_table} WHERE doc_id = %s;", (doc_id,))
+                        emb_row = cur.fetchone()
+                        if emb_row and emb_row[0] is not None:
+                            item["text_embedding"] = emb_row[0]
+                    except Exception:
+                        pass
+
+                image_table = self.get_embedding_table_name(format_type or "pdf_scan", "image")
+                if image_table:
+                    try:
+                        cur.execute(f"SELECT embedding FROM {image_table} WHERE doc_id = %s;", (doc_id,))
+                        emb_row = cur.fetchone()
+                        if emb_row and emb_row[0] is not None:
+                            item["image_embedding"] = emb_row[0]
+                    except Exception:
+                        pass
+
             data.append(item)
 
         logger.info(f"Loaded {len(data)} documents with embeddings.")
@@ -714,6 +730,22 @@ class DatabaseManager:
         with self.conn.cursor() as cur:
             cur.execute("DELETE FROM text_embeddings;")
             cur.execute("DELETE FROM image_embeddings;")
+            # Очищаем format-specific таблицы эмбеддингов
+            all_formats = [
+                "pdf_text", "pdf_scan", "pdf_tables", "pdf_tables_fin", "pdf_tables_tech", "pdf_tables_contr", "pdf_tables_reports", "pdf_tables_other",
+                "word_docx", "word_doc", "word_rtf", "word_txt", "word_odt",
+                "excel_xlsx", "excel_csv", "excel_ods",
+                "image_jpg", "image_png", "image_gif", "image_bmp", "image_tiff", "image_webp",
+                "xml_xml", "xml_xsd", "xml_xsl", "xml_wsdl",
+            ]
+            for fmt in all_formats:
+                for emb_type in ("text", "image"):
+                    table = self.get_embedding_table_name(fmt, emb_type)
+                    if table:
+                        try:
+                            cur.execute(f"DELETE FROM {table};")
+                        except Exception as e:
+                            logger.warning(f"Failed to clear {table}: {e}")
             cur.execute("""
                 UPDATE documents SET
                     text_embedded = FALSE,
@@ -773,7 +805,9 @@ class DatabaseManager:
             Имя таблицы или None если формат не поддерживает данный тип эмбеддингов
         """
         # Phase 1: PDF форматы поддерживают оба типа эмбеддингов
-        pdf_formats = {"pdf_text", "pdf_scan", "pdf_tables"}
+        pdf_formats = {"pdf_text", "pdf_scan", "pdf_tables",
+                     "pdf_tables_fin", "pdf_tables_tech",
+                     "pdf_tables_contr", "pdf_tables_reports", "pdf_tables_other"}
         
         if format_type in pdf_formats:
             return f"{emb_type}_embeddings_{format_type}"
@@ -802,14 +836,23 @@ class DatabaseManager:
         """Создаёт backup-таблицы для всех форматов после этапа 1."""
         with self.conn.cursor() as cur:
             # Все поддерживаемые форматы (Phase 1 + Phase 2)
+            # pdf_tables_* — подтипы финансовой/тех/договорной/etc документации;
+            # pdf_tables — общий код для unmatched (fallback под LLM на этапе 2).
             all_formats = [
-                "pdf_text", "pdf_scan", "pdf_tables",
+                # PDF
+                "pdf_text", "pdf_scan",
+                "pdf_tables", "pdf_tables_fin", "pdf_tables_tech",
+                "pdf_tables_contr", "pdf_tables_reports", "pdf_tables_other",
+                # Word
                 "word_docx", "word_doc", "word_rtf", "word_txt", "word_odt",
+                # Excel
                 "excel_xlsx", "excel_csv", "excel_ods",
+                # Image
                 "image_jpg", "image_png", "image_gif", "image_bmp", "image_tiff", "image_webp",
+# XML
                 "xml_xml", "xml_xsd", "xml_xsl", "xml_wsdl",
             ]
-            
+
             for fmt in all_formats:
                 table_name = f"documents_{fmt}"
                 backup_name = f"{table_name}_backup"
@@ -827,56 +870,77 @@ class DatabaseManager:
 
     def rollback_by_format(self, format_type: str, file_paths: List[str], restore_dir: Path):
         """Откат обработки формата: возврат файлов + очистка БД.
-        
+
         Args:
             format_type: тип формата (pdf_text, word_docx и т.д.)
             file_paths: список путей файлов для отката
             restore_dir: директория для возврата файлов (Sorted/{format})
         """
-        table_name = self.get_table_name_for_format(format_type)
-        
+        if not file_paths:
+            logger.info(f"Откат формата {format_type}: пустой список файлов")
+            return
+
         with self.conn.cursor() as cur:
             # Получаем doc_id из documents по file_path
             cur.execute("""
-                SELECT id FROM documents WHERE file_path = ANY(%s);
+                SELECT id, file_path FROM documents WHERE file_path = ANY(%s);
             """, (file_paths,))
-            doc_ids = [row[0] for row in cur.fetchall()]
-            
+            rows = cur.fetchall()
+            doc_ids = [row[0] for row in rows]
+            actual_paths = [row[1] for row in rows]
+
             if not doc_ids:
                 logger.info(f"Откат формата {format_type}: нет записей для отката")
                 return
-            
-            # Очищаем данные извлечения в таблице формата по id
-            cur.execute(f"""
-                UPDATE {table_name} SET
+
+            # Удаляем эмбеддинги из format-specific таблиц
+            for emb_type in ("text", "image"):
+                table = self.get_embedding_table_name(format_type, emb_type)
+                if table:
+                    try:
+                        cur.execute(f"DELETE FROM {table} WHERE doc_id = ANY(%s);", (doc_ids,))
+                    except Exception as e:
+                        logger.warning(f"Failed to clear {table}: {e}")
+
+            # Очищаем данные извлечения в основной таблице documents
+            cur.execute("""
+                UPDATE documents SET
                     text = NULL, image_path = NULL, error = NULL,
-                    stage_2_done = FALSE, updated_at = NOW()
-                WHERE id = ANY(%s);
-            """, (doc_ids,))
-            
+                    enriched_text = NULL, topic = NULL, doc_type = NULL, purpose = NULL,
+                    stage_2_done = FALSE, stage_3_done = FALSE,
+                    text_embedded = FALSE, image_embedded = FALSE,
+                    updated_at = NOW()
+                WHERE file_path = ANY(%s);
+            """, (actual_paths,))
+
             deleted = cur.rowcount
             self.conn.commit()
-        
+
         logger.info(f"Откат формата {format_type}: очищено {deleted} записей в БД")
 
     def get_format_stats(self) -> Dict[str, int]:
-        """Возвращает статистику файлов по форматам."""
+        """Возвращает статистику обработанных файлов по форматам."""
         stats = {}
-        
+
         with self.conn.cursor() as cur:
-            # Phase 1: PDF форматы
-            pdf_formats = ["pdf_text", "pdf_scan", "pdf_tables"]
-            
-            for fmt in pdf_formats:
-                table_name = f"documents_{fmt}"
+            all_formats = [
+                "pdf_text", "pdf_scan", "pdf_tables", "pdf_tables_fin", "pdf_tables_tech", "pdf_tables_contr", "pdf_tables_reports", "pdf_tables_other",
+                "word_docx", "word_doc", "word_rtf", "word_txt", "word_odt",
+                "excel_xlsx", "excel_csv", "excel_ods",
+                "image_jpg", "image_png", "image_gif", "image_bmp", "image_tiff", "image_webp",
+                "xml_xml", "xml_xsd", "xml_xsl", "xml_wsdl",
+            ]
+
+            for fmt in all_formats:
                 try:
-                    cur.execute(f"""
-                        SELECT COUNT(*) FROM {table_name} WHERE stage_2_done = TRUE;
-                    """)
+                    cur.execute("""
+                        SELECT COUNT(*) FROM documents
+                        WHERE format_type = %s AND stage_2_done = TRUE;
+                    """, (fmt,))
                     stats[fmt] = cur.fetchone()[0]
                 except Exception as e:
-                    logger.warning(f"Не удалось получить статистику для {table_name}: {e}")
-        
+                    logger.warning(f"Не удалось получить статистику для {fmt}: {e}")
+
         return stats
 
     def close(self):

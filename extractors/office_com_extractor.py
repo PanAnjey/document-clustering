@@ -22,7 +22,7 @@ _word_available = None
 _excel_available = None
 _word_semaphore = multiprocessing.Semaphore(cfg.COM_WORD_WORKERS)
 _excel_semaphore = multiprocessing.Semaphore(cfg.COM_EXCEL_WORKERS)
-_zombie_killed = False
+_zombie_killed: set = set()
 
 
 def precheck_com() -> bool:
@@ -70,11 +70,6 @@ def precheck_com() -> bool:
 
 def _kill_zombie_office(app_type: str = None):
     """Kill orphaned Office processes."""
-    global _zombie_killed
-    if _zombie_killed:
-        return
-    _zombie_killed = True
-
     import subprocess
     targets = []
     if app_type == 'word' or app_type is None:
@@ -82,6 +77,9 @@ def _kill_zombie_office(app_type: str = None):
     if app_type == 'excel' or app_type is None:
         targets.append('EXCEL.EXE')
     for proc in targets:
+        if proc in _zombie_killed:
+            continue
+        _zombie_killed.add(proc)
         try:
             subprocess.run(
                 ['taskkill', '/f', '/im', proc],
@@ -115,6 +113,8 @@ def convert_office_to_pdf(input_path: Path, output_dir: Path, file_type: str) ->
 
 def extract_word_com(file_path: Path) -> Dict:
     """Извлечение текста из Word файла через COM."""
+    global _word_available
+
     result = {
         "source": str(file_path),
         "type": "word",

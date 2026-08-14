@@ -8,6 +8,7 @@
 
 import re
 import time
+import threading
 import torch
 from typing import List, Optional
 from pathlib import Path
@@ -19,6 +20,7 @@ from logger_utils import logger
 
 _model_instance = None
 _tokenizer_instance = None
+_model_lock = threading.Lock()
 
 SYSTEM_PROMPT = """\
 Классифицируй документ по трём полям: ТЕМА, ТИП, НАЗНАЧЕНИЕ.
@@ -57,47 +59,48 @@ def _ensure_cuda_context():
 
 def load_model():
     global _model_instance, _tokenizer_instance
-    if _model_instance is not None:
-        return
+    with _model_lock:
+        if _model_instance is not None:
+            return
 
-    _ensure_cuda_context()
-    logger.info(f"Loading HF model from {cfg.HF_MODEL_PATH}...")
-    t0 = time.time()
+        _ensure_cuda_context()
+        logger.info(f"Loading HF model from {cfg.HF_MODEL_PATH}...")
+        t0 = time.time()
 
-    _tokenizer_instance = AutoTokenizer.from_pretrained(
-        str(cfg.HF_MODEL_PATH),
-        trust_remote_code=True,
-    )
-    _tokenizer_instance.padding_side = "left"
-    _tokenizer_instance.pad_token = _tokenizer_instance.eos_token
-
-    _model_instance = Qwen3_5ForConditionalGeneration.from_pretrained(
-        str(cfg.HF_MODEL_PATH),
-        torch_dtype=torch.bfloat16,
-        device_map=cfg.LLM_GPU_DEVICE,
-        trust_remote_code=True,
-    )
-
-    elapsed = time.time() - t0
-    alloc = torch.cuda.memory_allocated() / 1e9
-    logger.info(
-        f"HF model loaded in {elapsed:.1f}s, "
-        f"VRAM: {alloc:.2f} GB"
-    )
-
-    # Warmup: один forward pass для компиляции CUDA-графа
-    warmup_inputs = _tokenizer_instance(
-        ["тест"],
-        return_tensors="pt",
-        padding=True,
-    ).to(cfg.LLM_GPU_DEVICE)
-    with torch.no_grad():
-        _model_instance.generate(
-            **warmup_inputs,
-            max_new_tokens=1,
-            do_sample=False,
+        _tokenizer_instance = AutoTokenizer.from_pretrained(
+            str(cfg.HF_MODEL_PATH),
+            trust_remote_code=True,
         )
-    logger.debug("HF warmup done")
+        _tokenizer_instance.padding_side = "left"
+        _tokenizer_instance.pad_token = _tokenizer_instance.eos_token
+
+        _model_instance = Qwen3_5ForConditionalGeneration.from_pretrained(
+            str(cfg.HF_MODEL_PATH),
+            torch_dtype=torch.bfloat16,
+            device_map=cfg.LLM_GPU_DEVICE,
+            trust_remote_code=True,
+        )
+        _model_instance.eval()
+
+        elapsed = time.time() - t0
+        alloc = torch.cuda.memory_allocated() / 1e9
+        logger.info(
+            f"HF model loaded in {elapsed:.1f}s, "
+            f"VRAM: {alloc:.2f} GB"
+        )
+
+        warmup_inputs = _tokenizer_instance(
+            ["тест"],
+            return_tensors="pt",
+            padding=True,
+        ).to(cfg.LLM_GPU_DEVICE)
+        with torch.no_grad():
+            _model_instance.generate(
+                **warmup_inputs,
+                max_new_tokens=1,
+                do_sample=False,
+            )
+        logger.debug("HF warmup done")
 
 
 def unload_model():
@@ -138,10 +141,16 @@ def _make_prompt(text: str) -> str:
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_content},
     ]
-    return _tokenizer_instance.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True,
-        enable_thinking=False,
-    )
+    try:
+        return _tokenizer_instance.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True,
+            enable_thinking=False,
+        )
+    except TypeError:
+        # Старые версии transformers не поддерживают enable_thinking
+        return _tokenizer_instance.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True,
+        )
 
 
 def summarize(texts: List[str]) -> List[Optional[str]]:
