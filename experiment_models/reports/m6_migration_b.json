@@ -1,0 +1,86 @@
+{
+  "hdbscan_stats": {
+    "nomic_v15": {
+      "clusters": 2,
+      "noise": 0.016494268940452892,
+      "time_s": 1078.0,
+      "ari_vs_v3": 0.002378850429681252,
+      "nmi_vs_v3": 0.03365596532208874
+    },
+    "nomic_v2": {
+      "clusters": 5,
+      "noise": 0.1092664673877981,
+      "time_s": 1101.8,
+      "ari_vs_v3": 0.012140222428251475,
+      "nmi_vs_v3": 0.11956363453944081
+    },
+    "qwen3e_4b": {
+      "clusters": 6,
+      "noise": 0.16111481473516698,
+      "time_s": 3664.6,
+      "ari_vs_v3": 0.016924966709709173,
+      "nmi_vs_v3": 0.12954713923139338
+    },
+    "qwen3e_06b": {
+      "clusters": 9,
+      "noise": 0.246983935829337,
+      "time_s": 1467.8,
+      "ari_vs_v3": 0.02290049070324277,
+      "nmi_vs_v3": 0.13622799260083573
+    }
+  },
+  "hdbscan_pairs": [
+    {
+      "pair": "nomic_v15 vs nomic_v2",
+      "ari": 0.15779014711684436,
+      "nmi": 0.13631501661588166,
+      "ari_clustered_only": 0.1081813362646222,
+      "moved_frac": 0.976710178275736,
+      "n_both_clustered": 41338
+    },
+    {
+      "pair": "nomic_v15 vs qwen3e_4b",
+      "ari": 0.0765570634135641,
+      "nmi": 0.050056334712430185,
+      "ari_clustered_only": -0.004572938844001055,
+      "moved_frac": 0.9692479731618675,
+      "n_both_clustered": 38820
+    },
+    {
+      "pair": "nomic_v15 vs qwen3e_06b",
+      "ari": 0.060309632250749735,
+      "nmi": 0.08297078775718866,
+      "ari_clustered_only": 0.09089500919019225,
+      "moved_frac": 0.9726242446399003,
+      "n_both_clustered": 34995
+    },
+    {
+      "pair": "nomic_v2 vs qwen3e_4b",
+      "ari": 0.5823675020059971,
+      "nmi": 0.5061034442865352,
+      "ari_clustered_only": 0.8409411245428889,
+      "moved_frac": 0.9090127094040988,
+      "n_both_clustered": 37996
+    },
+    {
+      "pair": "nomic_v2 vs qwen3e_06b",
+      "ari": 0.4513369800185397,
+      "nmi": 0.4523513232283219,
+      "ari_clustered_only": 0.8208017308188116,
+      "moved_frac": 0.8860884712156728,
+      "n_both_clustered": 34731
+    },
+    {
+      "pair": "qwen3e_4b vs qwen3e_06b",
+      "ari": 0.6644838025727317,
+      "nmi": 0.6126538729438787,
+      "ari_clustered_only": 0.9308175586941178,
+      "moved_frac": 0.8208640674394099,
+      "n_both_clustered": 34797
+    }
+  ],
+  "params": {
+    "min_cluster_size": 95,
+    "eps_euclid": 0.7745966692414834
+  }
+}

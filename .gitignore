@@ -361,3 +361,31 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# --- Experiment tracks: keep reports/code (.md, .json, .py, .csv),
+# --- ignore regenerable heavy binary artifacts (embeddings, renders, Word/Excel dumps)
+experiment_xml/reports/*.png
+experiment_xml/reports/*.zip
+experiment_xml/reports/*interactive*.html
+experiment_xml/reports/map_data.json
+experiment_xml/_confluence_content.html
+experiment_xml/_confluence_html_content.txt
+
+experiment_excel/work/*.xlsx
+
+experiment_models/embeddings/
+experiment_models/logs/
+experiment_models/reports/*.npy
+experiment_models/reports/*.bak5
+experiment_models/reports/*.docx
+experiment_models/reports/_tmp_report.zip
+experiment_models/reports/_tmp_unz/
+
+experiment_ocr/renders/
+experiment_ocr/reports/*.docx
+experiment_ocr/results/*.bak_*
+
+TRAIN/**/*.pth
+TRAIN/**/*.npy
+EfficientNet_TRAIN/**/*.pth
+MobileNetV3_TRAIN/**/*.pth

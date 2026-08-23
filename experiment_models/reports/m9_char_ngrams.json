@@ -1,0 +1,142 @@
+{
+  "n_docs": 1999,
+  "sample": "experiment_models\\mixed_sample_2000_noscan.csv",
+  "stats": {
+    "char_raw_4096": {
+      "clusters": 2,
+      "noise": 0.15657828914457228,
+      "hdbscan_s": 13.834107160568237,
+      "nmi_group": 0.2968115354102115,
+      "ari_group": 0.14455336065439814,
+      "dim": 4096,
+      "elapsed_s": 2.1123862266540527,
+      "docs_per_s": 946.3231556694759
+    },
+    "char_tfidf_svd_512": {
+      "clusters": 2,
+      "noise": 0.6823411705852926,
+      "hdbscan_s": 1.4737799167633057,
+      "nmi_group": 0.24844752039739895,
+      "ari_group": 0.09984676752200287,
+      "dim": 512,
+      "vocab": 120000,
+      "elapsed_s": 32.56666135787964,
+      "docs_per_s": 61.38179096815319,
+      "svd_variance": 0.7243567187883853
+    },
+    "nomic_v15": {
+      "clusters": 2,
+      "noise": 0.09804902451225612,
+      "hdbscan_s": 2.2970011234283447,
+      "nmi_group": 0.3180763423587818,
+      "ari_group": 0.140331221957663,
+      "dim": 768
+    },
+    "nomic_v2": {
+      "clusters": 2,
+      "noise": 0.7628814407203601,
+      "hdbscan_s": 2.260934829711914,
+      "nmi_group": 0.37623032533309125,
+      "ari_group": 0.1732392626699943,
+      "dim": 768
+    },
+    "e5_large": {
+      "clusters": 2,
+      "noise": 0.6248124062031015,
+      "hdbscan_s": 3.19531512260437,
+      "nmi_group": 0.25177767530448647,
+      "ari_group": 0.13827106434014658,
+      "dim": 1024
+    },
+    "rubert_tiny2": {
+      "clusters": 2,
+      "noise": 0.21510755377688845,
+      "hdbscan_s": 0.84234619140625,
+      "nmi_group": 0.2832077955017729,
+      "ari_group": 0.14864825222324568,
+      "dim": 312
+    },
+    "rubert_base_dp": {
+      "clusters": 2,
+      "noise": 0.4302151075537769,
+      "hdbscan_s": 2.2107133865356445,
+      "nmi_group": 0.2536384459756831,
+      "ari_group": 0.14284585603714944,
+      "dim": 768
+    },
+    "sbert_ru": {
+      "clusters": 2,
+      "noise": 0.28264132066033015,
+      "hdbscan_s": 2.935407876968384,
+      "nmi_group": 0.31937348056283416,
+      "ari_group": 0.2032876432091854,
+      "dim": 1024
+    },
+    "bge_m3": {
+      "clusters": 2,
+      "noise": 0.5472736368184092,
+      "hdbscan_s": 3.016352415084839,
+      "nmi_group": 0.350855164214567,
+      "ari_group": 0.2300527826324006,
+      "dim": 1024
+    },
+    "qwen3e_06b": {
+      "clusters": 2,
+      "noise": 0.4797398699349675,
+      "hdbscan_s": 2.9957404136657715,
+      "nmi_group": 0.2753855413615717,
+      "ari_group": 0.17114781481775845,
+      "dim": 1024
+    },
+    "qwen3e_4b": {
+      "clusters": 2,
+      "noise": 0.6533266633316658,
+      "hdbscan_s": 7.990267038345337,
+      "nmi_group": 0.27376408026651455,
+      "ari_group": 0.1512829931913564,
+      "dim": 2560
+    }
+  },
+  "pairs": {
+    "char_raw_4096": {
+      "ari_vs_rubert_base_dp": 0.33202983991280305,
+      "nmi_vs_rubert_base_dp": 0.5069865492635786
+    },
+    "char_tfidf_svd_512": {
+      "ari_vs_rubert_base_dp": 0.27526266534773886,
+      "nmi_vs_rubert_base_dp": 0.4225028634276078
+    },
+    "nomic_v15": {
+      "ari_vs_rubert_base_dp": 0.32909206843094274,
+      "nmi_vs_rubert_base_dp": 0.5445332072332142
+    },
+    "nomic_v2": {
+      "ari_vs_rubert_base_dp": 0.28198283577363353,
+      "nmi_vs_rubert_base_dp": 0.40690358752392386
+    },
+    "e5_large": {
+      "ari_vs_rubert_base_dp": 0.32293359068646027,
+      "nmi_vs_rubert_base_dp": 0.4511323911625468
+    },
+    "rubert_tiny2": {
+      "ari_vs_rubert_base_dp": 0.4043973431039133,
+      "nmi_vs_rubert_base_dp": 0.5633362793877954
+    },
+    "sbert_ru": {
+      "ari_vs_rubert_base_dp": 0.3752652109439278,
+      "nmi_vs_rubert_base_dp": 0.43931609566849633
+    },
+    "bge_m3": {
+      "ari_vs_rubert_base_dp": 0.34471618479799554,
+      "nmi_vs_rubert_base_dp": 0.4426388986186635
+    },
+    "qwen3e_06b": {
+      "ari_vs_rubert_base_dp": 0.3762774369598685,
+      "nmi_vs_rubert_base_dp": 0.48607280381231277
+    },
+    "qwen3e_4b": {
+      "ari_vs_rubert_base_dp": 0.21221247466235943,
+      "nmi_vs_rubert_base_dp": 0.2608005653911737
+    }
+  }
+}
