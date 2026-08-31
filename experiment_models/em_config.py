@@ -12,7 +12,20 @@
 #   rubert_tiny2 — cointegrated/rubert-tiny2, 312d, маленькая/быстрая (RU)
 #   sbert_ru     — ai-forever/sbert_large_nlu_ru, 1024d, русская
 #
-# Все модели: mean-pooling + L2-нормализация (единая методология).
+# Добавлено 2026-08-27 (запрос пользователя — новые модели на HF):
+#   giga_480m — ai-sage/Giga-Embeddings-instruct-480M-0826, Qwen3-based
+#               bidirectional, 1024d, mean-pooling (укладывается в общую
+#               методологию), MTEB-ru 70.98 (v1.1) по карточке модели.
+#   giga_3b   — ai-sage/Giga-Embeddings-instruct, 3B (GigaChat-3B decoder),
+#               2048d, Latent-Attention pooling — НЕ mean/last_token!
+#               Официальный вызов: model(**inputs, return_embeddings=True)
+#               уже возвращает пулинг-вектор, а не last_hidden_state.
+#               См. ветку pooling == 'latent_attention' в em_model_loader.py.
+#               max_len=4096 — самый длинный контекст в реестре, ~12GB VRAM
+#               ожидаемо (сопоставимо с qwen3e_4b).
+#
+# Все модели: mean-pooling + L2-нормализация (единая методология),
+# кроме pooling='last_token' (qwen3e_*) и pooling='latent_attention' (giga_3b).
 
 import sys
 from pathlib import Path
@@ -125,6 +138,26 @@ MODELS = {
         'batch': 128,
         'pooling': 'last_token',
         'comment': 'Qwen3-Embedding-0.6B, MTEB Multi 64.33 (cluster 52.33), MRL 1024d',
+    },
+    'giga_480m': {
+        'hf_name': 'ai-sage/Giga-Embeddings-instruct-480M-0826',
+        'dim': 1024,
+        'prefix_doc': '',           # документы БЕЗ инструкции (model card)
+        'trust_remote_code': True,
+        'max_len': 512,
+        'batch': 64,
+        'pooling': 'mean',
+        'comment': 'Giga-Embeddings 480M (Qwen3 bidir.), MTEB-ru 70.98, релиз 2026-08-26',
+    },
+    'giga_3b': {
+        'hf_name': 'ai-sage/Giga-Embeddings-instruct',
+        'dim': 2048,
+        'prefix_doc': '',           # документы БЕЗ инструкции (model card)
+        'trust_remote_code': True,
+        'max_len': 4096,
+        'batch': 16,                # 3B, консервативно (см. VRAM-комментарий выше)
+        'pooling': 'latent_attention',
+        'comment': 'Giga-Embeddings-instruct 3B (GigaChat-3B decoder), Latent-Attention pooling',
     },
 }
 

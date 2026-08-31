@@ -26,6 +26,10 @@ from phase_m4_eval import load_model_embeddings  # noqa: E402
 KNN_SUB = 15000
 KNN_K = 10
 KMEANS_N_INIT = 3
+# Сид фиксирован ради воспроизводимости, но ARI от него сильно зависит:
+# разброс одной модели по сидам сопоставим с разбросом между моделями.
+# Сравнивать модели по этому числу нельзя — для этого есть фаза M4c.
+KMEANS_SEED = 42
 
 
 def knn_purity(embs: np.ndarray, labels: np.ndarray, rng) -> float:
@@ -48,7 +52,7 @@ def knn_purity(embs: np.ndarray, labels: np.ndarray, rng) -> float:
 def kmeans_agreement(embs: np.ndarray, labels: np.ndarray) -> tuple:
     k = len(np.unique(labels))
     km = MiniBatchKMeans(n_clusters=k, batch_size=8192,
-                         n_init=KMEANS_N_INIT, random_state=42)
+                         n_init=KMEANS_N_INIT, random_state=KMEANS_SEED)
     pred = km.fit_predict(embs)
     return (float(adjusted_rand_score(labels, pred)),
             float(normalized_mutual_info_score(labels, pred)))
@@ -79,6 +83,15 @@ def main():
         json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
 
     lines = ['# M4b: интринсик-метрики (без центроидов v1.5, ~46.5K XML)', '']
+    lines.append('> **ARI ниже — одиночный замер при сиде '
+                 f'{KMEANS_SEED}, по нему нельзя сравнивать модели.** '
+                 'Разброс ARI одной модели от одного лишь сида доходит до '
+                 '0.069 — столько же, сколько разброс между всеми моделями '
+                 '(замер 2026-08-30). Для сравнения берите средние с '
+                 'погрешностью из M4c (`reports/m4c_ari_variance.md`, '
+                 'фаза `phase_m4c_ari_variance.py`). NMI устойчивее, но '
+                 'близкие значения и по нему неразличимы.')
+    lines.append('')
     lines.append('| Модель | dim | kNN purity@10 | KMeans ARI | KMeans NMI |')
     lines.append('|---|---|---|---|---|')
     for r in rows:
@@ -88,7 +101,9 @@ def main():
     lines.append('kNN purity — доля соседей своей темы (подвыборка 15K). '
                  'ARI/NMI — согласованность MiniBatchKMeans(k=25) с эталонными темами. '
                  'Метки тем из пространства v1.5 — остаточное преимущество baseline '
-                 'возможно, но слабее, чем в LOO (центроиды не используются).')
+                 'возможно, но слабее, чем в LOO (центроиды не используются). '
+                 f'ARI/NMI посчитаны одним сидом ({KMEANS_SEED}) — см. '
+                 'предупреждение в начале раздела.')
     out = REPORTS_DIR / 'm4b_intrinsic.md'
     out.write_text('\n'.join(lines), encoding='utf-8')
     print(f"\nwritten {out}")

@@ -40,6 +40,12 @@ def fetch_docs(n: int) -> pd.DataFrame:
         ORDER BY random() LIMIT %s
     """, conn, params=(n * 2,))  # запас на битые/отсутствующие файлы
     conn.close()
+    # В БД file_path указывает на D:\FileOrganizer\Sorted\... — эта папка
+    # больше не существует, файлы физически лежат в Sorted_golden (см.
+    # 2026-08-27: переименование/заморозка датасета). Подмена только для
+    # этого OCR-теста, БД/остальной пайплайн не трогаем.
+    df['file_path'] = df['file_path'].apply(
+        lambda p: p.replace('\\Sorted\\', '\\Sorted_golden\\') if p else p)
     df = df[df['file_path'].apply(lambda p: p and Path(p).exists())]
     return df.head(n)
 

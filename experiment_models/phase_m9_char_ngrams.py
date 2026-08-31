@@ -39,17 +39,16 @@ def build_raw(texts):
 
 
 def build_tfidf(texts):
+    # общий обученный артефакт (artifacts/char_tfidf_svd_512.joblib), только
+    # transform — без fit на этой выборке. См. char_ngram_artifact.py.
+    from char_ngram_artifact import embed as tfidf_embed, load as tfidf_load
     t0 = time.time()
-    vec = TfidfVectorizer(analyzer='char_wb', ngram_range=(3, 5),
-                          lowercase=True, min_df=2, max_features=120000,
-                          sublinear_tf=True)
-    sparse = vec.fit_transform(texts)
-    svd = TruncatedSVD(n_components=512, random_state=20260818)
-    x = normalize(svd.fit_transform(sparse)).astype(np.float32)
+    x = tfidf_embed(texts)
     dt = time.time() - t0
-    return x, {'dim': 512, 'vocab': sparse.shape[1], 'elapsed_s': dt,
+    meta = tfidf_load()['meta']
+    return x, {'dim': 512, 'vocab': meta['vocab'], 'elapsed_s': dt,
                'docs_per_s': len(texts) / dt,
-               'svd_variance': float(svd.explained_variance_ratio_.sum())}
+               'svd_variance': meta['svd_variance'], 'n_train': meta['n_train']}
 
 
 def cluster_stats(x, groups):

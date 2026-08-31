@@ -21,6 +21,9 @@ def main():
     m1 = {r['model']: r for r in load('m1_lexical.json')}
     m4 = {r['model']: r for r in load('m4_eval.json')}
     m4b = {r['model']: r for r in load('m4b_intrinsic.json')}
+    # M4c: ARI/NMI, усреднённые по нескольким сидам k-means. Если файла нет,
+    # таблица откатывается на одиночные значения M4b (сид 42).
+    m4c = {r['model']: r for r in load('m4c_ari_variance.json')}
     m5 = {r['model']: r for r in load('m5_ocr.json')}
 
     L = []
@@ -35,8 +38,15 @@ def main():
     L.append('|---|---|---|---|---|---|---|---|---|---|---|---|')
     for key in MODELS:
         a, b, c, d = m1.get(key, {}), m4.get(key, {}), m4b.get(key, {}), m5.get(key, {})
+        e = m4c.get(key, {})
         def f(x, fmt='{:.3f}'):
             return fmt.format(x) if isinstance(x, float) else ('—' if x is None else str(x))
+
+        def spread(metric, single):
+            """«среднее ± σ» по сидам k-means; одиночное значение, если M4c нет."""
+            if e.get(metric + '_mean') is None:
+                return f(single)
+            return f"{e[metric + '_mean']:.3f} ± {e[metric + '_std']:.3f}"
         L.append(
             f"| {key} | {MODELS[key]['dim']} "
             f"| {f(a.get('syn_cos_mean'))} "
@@ -44,16 +54,34 @@ def main():
             f"| {a.get('disc_ok', '—')} "
             f"| {f(b.get('loo_top1'), '{:.1%}')} "
             f"| {f(c.get('knn_purity_10'))} "
-            f"| {f(c.get('kmeans_ari'))} "
-            f"| {f(c.get('kmeans_nmi'))} "
+            f"| {spread('ari', c.get('kmeans_ari'))} "
+            f"| {spread('nmi', c.get('kmeans_nmi'))} "
             f"| {f(d.get('cos_mean'))} "
             f"| {f(d.get('id_top1'), '{:.1%}')} "
             f"| {f(b.get('docs_per_s'), '{:.0f}')} |"
         )
     L.append('')
     L.append('\\* LOO top-1: метки построены в пространстве nomic_v15 → '
-             'у baseline «домашнее» преимущество. Справедливые метрики — '
+             'у baseline «домашнее» преимущество. Метрики без этого перекоса — '
              'kNN purity и ARI/NMI (центроиды v1.5 не участвуют).')
+    if m4c:
+        seeds = next(iter(m4c.values())).get('seeds', [])
+        worst = max(r['ari_max'] - r['ari_min'] for r in m4c.values())
+        between = (max(r['ari_mean'] for r in m4c.values())
+                   - min(r['ari_mean'] for r in m4c.values()))
+        L.append('')
+        L.append(f'ARI и NMI даны как среднее ± σ по {len(seeds)} сидам '
+                 f'MiniBatchKMeans ({seeds}); прочие параметры кластеризации '
+                 f'те же, что в M4b. **Ранжировать модели по ARI нельзя**: '
+                 f'разброс ОДНОЙ модели от одного лишь сида достигает '
+                 f'{worst:.3f}, а разброс средних между всеми моделями — '
+                 f'{between:.3f}. До 2026-08-30 в таблице стояли значения при '
+                 f'единственном сиде 42, и они вводили в заблуждение: nomic_v2 '
+                 f'получил свой максимум (0.361 при среднем 0.337) и первое '
+                 f'место, qwen3e_4b — свой минимум (0.311 при среднем 0.332); '
+                 f'по средним они неразличимы. NMI устойчивее, но и по нему '
+                 f'близкие значения различать не следует. Подробности — '
+                 f'reports/m4c_ari_variance.md.')
     L.append('')
 
     # ── M6: миграция кластеров ───────────────────────────────────
@@ -167,9 +195,12 @@ def main():
                       'nomic_v2': ['512', '256', '128'],
                       'nomic_v15': ['512', '256', '128'],
                       'e5_large': ['512', '256', '128'],
-                      'sbert_ru': ['512', '256', '128']}
+                      'sbert_ru': ['512', '256', '128'],
+                      'giga_3b': ['2048', '1024', '512', '256'],
+                      'giga_480m': ['1024', '512', '256']}
         native = {'qwen3e_4b': 2560, 'qwen3e_06b': 1024, 'nomic_v2': 768,
-                  'nomic_v15': 768, 'e5_large': 1024, 'sbert_ru': 1024}
+                  'nomic_v15': 768, 'e5_large': 1024, 'sbert_ru': 1024,
+                  'giga_3b': 2048, 'giga_480m': 1024}
         for m, dims in order_dims.items():
             if m not in m7:
                 continue
@@ -220,7 +251,8 @@ def main():
         L.append('')
 
     for name, title in [('m1_lexical.md', None), ('m4_eval.md', None),
-                        ('m4b_intrinsic.md', None), ('m5_ocr.md', None)]:
+                        ('m4b_intrinsic.md', None),
+                        ('m4c_ari_variance.md', None), ('m5_ocr.md', None)]:
         p = REPORTS_DIR / name
         if p.exists():
             L.append('')
