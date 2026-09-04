@@ -1,17 +1,10 @@
 # extractors/pdf_extractor.py
 # Извлечение текста из PDF файлов через PyMuPDF4LLM + OCR
 
-import io
-import os
-import sys
-import tempfile
-import shutil
-import threading
 from pathlib import Path
 from typing import Optional, Dict
 
 import fitz  # PyMuPDF
-from PIL import Image
 
 from config import cfg
 from logger_utils import logger, assess_text_quality, filter_mupdf_stderr
@@ -63,9 +56,7 @@ def _extract_pdf_inner(file_path: Path, result: Dict) -> Dict:
                     result['text_quality'] = assess_text_quality(result['text'])
 
             if assess_text_quality(result.get('text')) != "good":
-                page = doc.load_page(0)
-                mat = fitz.Matrix(2, 2)
-                pix = page.get_pixmap(matrix=mat)
+                from utils.rotate_fix import render_pdf_first_page_upright
 
                 img_dir = cfg.EXTRA['pdf_images']
                 img_dir.mkdir(parents=True, exist_ok=True)
@@ -78,8 +69,9 @@ def _extract_pdf_inner(file_path: Path, result: Dict) -> Dict:
                     img_path = img_dir / f"{file_path.stem}_{cnt}.png"
                     cnt += 1
 
-                pix.save(str(img_path))
-                result['image'] = str(img_path)
+                rendered = render_pdf_first_page_upright(file_path, img_path, zoom=2.0)
+                if rendered:
+                    result['image'] = rendered
         finally:
             doc.close()
             _suppress_mupdf_warnings()
@@ -124,7 +116,6 @@ def _extract_text_hybrid(pdf_path: Path) -> Optional[str]:
             use_ocr = cfg.PYMUPDF4LLM_OCR_ENABLED
             md_text = pymupdf4llm.to_markdown(
                 str(pdf_path),
-                pages=[0],
                 header=cfg.PYMUPDF4LLM_HEADER_FOOTER,
                 footer=cfg.PYMUPDF4LLM_HEADER_FOOTER,
                 use_ocr=use_ocr,
@@ -162,35 +153,4 @@ def _extract_text_fitz(pdf_path: Path) -> Optional[str]:
         return result.strip() if result.strip() else None
     except Exception as e:
         logger.warning(f"Fitz extraction failed for {pdf_path.name}: {e}")
-        return None
-
-
-def _extract_text_pymupdf4llm(pdf_path: Path) -> Optional[str]:
-    """Извлечение текста через PyMuPDF4LLM с OCR."""
-    if not cfg.PYMUPDF4LLM_ENABLED:
-        return None
-    
-    try:
-        import pymupdf4llm
-    except ImportError:
-        logger.debug("PyMuPDF4LLM not available")
-        return None
-
-    try:
-        use_ocr = cfg.PYMUPDF4LLM_OCR_ENABLED
-        md_text = pymupdf4llm.to_markdown(
-            str(pdf_path),
-            pages=[0],
-            header=cfg.PYMUPDF4LLM_HEADER_FOOTER,
-            footer=cfg.PYMUPDF4LLM_HEADER_FOOTER,
-            use_ocr=use_ocr,
-            ocr_language=cfg.TESSERACT_LANG if use_ocr else "eng",
-            table_strategy=cfg.PYMUPDF4LLM_TABLE_STRATEGY,
-            page_chunks=False,
-        )
-        if md_text and md_text.strip():
-            return md_text.strip()
-        return None
-    except Exception as e:
-        logger.warning(f"PyMuPDF4LLM failed for {pdf_path.name}: {e}, using fitz fallback")
         return None

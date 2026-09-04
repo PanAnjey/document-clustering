@@ -89,15 +89,78 @@ DAG-и лежат в `<проект>/airflow/dags/` (на /mnt/d, читаютс
 там резолвится в локальную папку проекта `airflow/` (namespace package), и
 `airflow.experiments.runner` находится корректно при cwd = корень проекта.
 
-## TODO: автозапуск при старте WSL
+## Автозапуск при логоне Windows (Task Scheduler)
 
-Сейчас scheduler/webserver запускаются вручную (`start_airflow.sh`). Варианты
-автозапуска (не реализовано):
-- `[boot] command=/opt/airflow/start_airflow.sh` в `/etc/wsl.conf` (проверить
-  выживаемость nohup-процессов);
-- доработать systemd-юниты (разобраться, почему systemd глушит webserver ~16с:
-  вероятно `KillMode`/cgroup + gunicorn-монитор);
-- Windows Task Scheduler → `wsl -d Ubuntu -u root /opt/airflow/start_airflow.sh` при логоне.
+Реализован через Windows Task Scheduler, триггер `At user logon`. Содержимое:
+
+- `start_airflow_windows.cmd` — обёртка на одну команду `wsl.exe -d Ubuntu -u root -- /opt/airflow/start_airflow.sh`.
+  Запущенный WSL дистрибутив стартует systemd → PostgreSQL (метаданные Airflow),
+  затем `start_airflow.sh` поднимает scheduler + webserver через nohup и завершается (~2-3с).
+- `airflow_autostart.xml` — описатель задачи Task Scheduler 2.0 (триггер LogonTrigger,
+  principal InteractiveToken/LeastPrivilege, ExecutionTimeLimit PT5M).
+- `register_task.ps1` — PowerShell script, импортирующий XML в Task Scheduler.
+
+### Регистрация (выполняется 1 раз)
+
+Требует elevated PowerShell (Task Scheduler API не даёт не-админу регистрировать задачи даже в `\\Users\<user>`).
+
+**Вариант 1 — скриптом (рекомендуется):**
+```powershell
+# 1) ПКМ по PowerShell -> Run as administrator
+# 2) Разрешить запуск скриптов (если ещё не разрешено):
+Set-ExecutionPolicy -Scope Process Bypass -Force
+# 3) Зарегистрировать:
+D:\Yandex.Disk\PYTHON\NLTK\Кластеризация\airflow_wsl\register_task.ps1
+```
+
+**Вариант 2 — одной командой из elevated PowerShell:**
+```powershell
+Register-ScheduledTask `
+    -TaskName "AirflowWSL_Autostart" `
+    -TaskPath "\Кластеризация" `
+    -Xml (Get-Content "D:\Yandex.Disk\PYTHON\NLTK\Кластеризация\airflow_wsl\airflow_autostart.xml" | Out-String) `
+    -User "$env:USERDOMAIN\$env:USERNAME" `
+    -Force
+```
+
+**Вариант 3 — через GUI:**
+1. `Win+R` → `taskschd.msc`
+2. Action → Import Task… → выбрать `airflow_autostart.xml`
+3. (На вкладке General проверить имя пользователя)
+
+### Проверка
+
+```powershell
+# Состояние задачи (не-elevated OK)
+Get-ScheduledTask -TaskName "AirflowWSL_Autostart" -TaskPath "\Кластеризация" `
+    | Select-Object TaskName, TaskPath, State, @{n='Trigger';e={$_.Triggers[0].GetType().Name}} | Format-List
+
+# Ручной запуск (не-elevated OK): в UI "Run" или из CLI
+Start-ScheduledTask -TaskName "AirflowWSL_Autostart" -TaskPath "\Кластеризация"
+
+# Проверка Airflow
+(Invoke-WebRequest http://localhost:8080/health -UseBasicParsing).StatusCode  # 200
+```
+
+### Удаление
+
+```powershell
+# Из elevated PowerShell:
+Unregister-ScheduledTask -TaskName "AirflowWSL_Autostart" -TaskPath "\Кластеризация" -Confirm:$false
+```
+
+### Почему не `[boot] command=` в `/etc/wsl.conf`
+
+Альтернативно можно дописать `command=/opt/airflow/start_airflow.sh` в секции `[boot]` `/etc/wsl.conf` — тогда Airflow стартует при *первом* запуске WSL кем угодно. Недостатки:
+- WSL не запускается автоматически при загрузке Windows (требуется внешний триггер);
+-Boot command запускается синхронно — boot WSL задерживается на ~2-3с на старте;
+- Если пользователь сам открывает терминал WSL после старта Airflow — повторный запуск пройдёт через `pkill` в start_airflow.sh, что сбрасывает процессы.
+
+Выбранный путь (Task Scheduler ONLOGON) явно запускает WSL один раз при логоне, Airflow поднимается через `start_airflow.sh`, последующие интерактивные запуски WSL не повторяют запуск Airflow.
+
+### Почему не systemd-юниты
+
+В этой сессии webserver падал через ~16с при запуске через systemd (KillMode/cgroup конфликт с gunicorn-монитором). nohup-запуск стабилен. Можно вернуться к systemd после фикса этого конфликта — тогда автозапуск переезжает на `wsl.conf [boot] systemd=true` + `systemctl enable airflow-{scheduler,webserver}` и Task Scheduler нужен только чтобы `wsl --boot` при логоне.
 
 ## Диагностика проблем этой сессии
 

@@ -5,15 +5,15 @@
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List
-import os
+import os  # used for os.cpu_count()
 
 @dataclass
 class Config:
     # -------------------- Общие пути --------------------
     ROOT: Path = Path(r"D:\FileOrganizer")
-    SOURCE_DIR: Path = ROOT / "SourceFiles"
-    ERRORS_DIR: Path = ROOT / "ErrorFiles"
-    FAILED_EXTRACTION_DIR: Path = ROOT / "FailedExtraction"
+    SOURCE_DIR: Path = field(init=False)
+    ERRORS_DIR: Path = field(init=False)
+    FAILED_EXTRACTION_DIR: Path = field(init=False)
     
     # -------------------- Поддерживаемые форматы --------------------
     PDF_FORMATS: List[str] = field(default_factory=lambda: [".pdf"])
@@ -21,7 +21,7 @@ class Config:
         default_factory=lambda: [".xlsx", ".xls", ".xlsm", ".xlsb", ".xltx", ".xlt", ".xltm", ".csv", ".ods"]
     )
     WORD_FORMATS: List[str] = field(
-        default_factory=lambda: [".docx", ".doc", ".rtf", ".txt", ".odt", ".odp"]
+        default_factory=lambda: [".docx", ".doc", ".rtf", ".txt", ".odt"]
     )
     IMAGE_FORMATS: List[str] = field(
         default_factory=lambda: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp", ".svg", ".jfif"]
@@ -87,7 +87,13 @@ class Config:
         # PDF подкатегории
         "pdf_text":   "Sorted/PDF_Text",
         "pdf_scan":   "Sorted/PDF_Scan",
-        "pdf_tables": "Sorted/PDF_Tables",
+        # pdf_tables — общая папка (для unmatched); подтипы раскладываются в подпапки
+        "pdf_tables":         "Sorted/PDF_Tables",
+        "pdf_tables_fin":     "Sorted/PDF_Tables/fin",
+        "pdf_tables_tech":    "Sorted/PDF_Tables/tech",
+        "pdf_tables_contr":   "Sorted/PDF_Tables/contr",
+        "pdf_tables_reports": "Sorted/PDF_Tables/reports",
+        "pdf_tables_other":   "Sorted/PDF_Tables/other",
         # Word форматы (будут добавлены в Phase 2)
         "word_docx":  "Sorted/Word_Docx",
         "word_doc":   "Sorted/Word_Doc",
@@ -105,11 +111,15 @@ class Config:
         "image_bmp":  "Sorted/Image_Bmp",
         "image_tiff": "Sorted/Image_Tiff",
         "image_webp": "Sorted/Image_Webp",
-        # XML форматы (будут добавлены в Phase 2)
-        "xml_xml":    "Sorted/XML_Xml",
-        "xml_xsd":    "Sorted/XML_Xsd",
-        "xml_xsl":    "Sorted/XML_Xsl",
-        "xml_wsdl":   "Sorted/XML_Wsdl",
+        # XML форматы
+        "xml_xml":    "Sorted/xml",
+        "xml_xsd":    "Sorted/xsd",
+        "xml_xsl":    "Sorted/xsl",
+        "xml_wsdl":   "Sorted/wsdl",
+        "xml_fns":    "Sorted/xml_fns",
+        # Архивы и мультимедиа
+        "zip":        "Sorted/zip",
+        "multimedia": "Sorted/multimedia",
     }
 
     # Legacy TAGS (обратная совместимость)
@@ -117,7 +127,12 @@ class Config:
         "pdf":   "Sorted/PDF",
         "pdf_text": "Sorted/PDF_Text",
         "pdf_scan": "Sorted/PDF_Scan",
-        "pdf_tables": "Sorted/PDF_Tables",
+        "pdf_tables":         "Sorted/PDF_Tables",
+        "pdf_tables_fin":     "Sorted/PDF_Tables/fin",
+        "pdf_tables_tech":    "Sorted/PDF_Tables/tech",
+        "pdf_tables_contr":   "Sorted/PDF_Tables/contr",
+        "pdf_tables_reports": "Sorted/PDF_Tables/reports",
+        "pdf_tables_other":   "Sorted/PDF_Tables/other",
         "excel": "Sorted/Excel",
         "word":  "Sorted/Word",
         "image": "Sorted/Images",
@@ -132,10 +147,10 @@ class Config:
     TARGETS: dict = field(init=False)
 
     # -------------------- Extra (извлечённые данные) --------------------
-    EXTRACT_ROOT: Path = ROOT / "Extracted"
-    EMBEDDINGS_DIR: Path = ROOT / "Embeddings"
-    LOG_DIR: Path = ROOT / "Logs"
-    LOG_FILE: Path = LOG_DIR / "file_organizer.log"
+    EXTRACT_ROOT: Path = field(init=False)
+    EMBEDDINGS_DIR: Path = field(init=False)
+    LOG_DIR: Path = field(init=False)
+    LOG_FILE: Path = field(init=False)
     
     # Папки для временных файлов
     EXTRA: dict = field(init=False)
@@ -148,6 +163,12 @@ class Config:
     # -------------------- Aspose.Words for Java --------------------
     ASPOSE_WORDS_JAVA_DIR: Path = Path(r"D:\Yandex.Disk\Aspose\Aspose.Words for Java")
     ASPOSE_WORKERS: int = 8
+
+    # -------------------- Aspose.Cells for Java (XLSX → PDF) --------------------
+    # Используется на этапе 2 для формата excel_xlsx: конвертация в PDF +
+    # извлечение первых 2 страниц как PNG-изображений в cfg.EXTRA['excel_xlsx_pages'].
+    # jar должен лежать в lib/Aspose.Cells_for_Java/lib/, см. README в этом каталоге.
+    ASPOSE_CELLS_JAVA_DIR: Path = Path(r"D:\Yandex.Disk\Aspose\Aspose.Cells for Java")
 
     # -------------------- COM (Microsoft Office) --------------------
     COM_ENABLED: bool = True
@@ -175,6 +196,9 @@ class Config:
     SOURCE_RAR: Path = ROOT / "SourceFiles.rar"
     SOURCE_RAR_TEST: Path = ROOT / "SourceFiles_test.rar"
 
+    # -------------------- Full Rollback --------------------
+    ROLLBACK_REPOPULATE_DIR: Path = Path(r"D:\FileOrganizer\TRAIN\NONFORMAL\1")
+
     # -------------------- Clustering --------------------
     SIMILARITY_THRESHOLD: float = 0.85
     TOP_N_CLUSTERS: int = 20
@@ -187,22 +211,44 @@ class Config:
     LOG_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
     def __post_init__(self):
+        # Производные пути (пересчитываются при изменении ROOT через override)
+        self.SOURCE_DIR = self.ROOT / "SourceFiles"
+        self.ERRORS_DIR = self.ROOT / "ErrorFiles"
+        self.FAILED_EXTRACTION_DIR = self.ROOT / "FailedExtraction"
+        self.EXTRACT_ROOT = self.ROOT / "Extracted"
+        self.EMBEDDINGS_DIR = self.ROOT / "Embeddings"
+        self.LOG_DIR = self.ROOT / "Logs"
+        self.LOG_FILE = self.LOG_DIR / "file_organizer.log"
+
         # Инициализация TARGETS
         self.TARGETS = {k: self.ROOT / v for k, v in self.TAGS.items()}
         
         # Инициализация EXTRA (пути для временных файлов)
         self.EXTRA = {
             "pdf_images":  self.EXTRACT_ROOT / "PDF_Images",
-            "office_pdf":  self.EXTRACT_ROOT / "Office_PDF", # Для PDF из Office
+            "office_pdf":  self.EXTRACT_ROOT / "Office_PDF",
+            # Excel XLSX: результат этапа 2 — конвертированный PDF и первые 1-2 страницы как PNG
+            "excel_xlsx_pages": self.EXTRACT_ROOT / "Excel_Xlsx",
         }
         
-        # Создание директорий
-        for path in [self.ERRORS_DIR, self.LOG_DIR, self.EMBEDDINGS_DIR]:
-            path.mkdir(parents=True, exist_ok=True)
+        self.ensure_dirs()
+
+    def ensure_dirs(self):
+        """Создание необходимых директорий. Можно вызывать повторно после изменения путей.
+
+        Sorted/ подкатегории НЕ создаются здесь — они создаются по требованию
+        индивидуальными процессорами при перемещении файлов.
+        """
+        for path in [self.ERRORS_DIR, self.LOG_DIR, self.EMBEDDINGS_DIR,
+                      self.FAILED_EXTRACTION_DIR]:
+            if path:
+                path.mkdir(parents=True, exist_ok=True)
         for path in self.TARGETS.values():
-            path.mkdir(parents=True, exist_ok=True)
+            if path and "Sorted" not in path.parts:
+                path.mkdir(parents=True, exist_ok=True)
         for path in self.EXTRA.values():
-            path.mkdir(parents=True, exist_ok=True)
+            if path:
+                path.mkdir(parents=True, exist_ok=True)
 
 cfg = Config()
 
@@ -215,9 +261,9 @@ if _override_path.exists():
             if hasattr(cfg, _key):
                 # Получаем тип поля из dataclass, а не текущее значение
                 field_type = None
-                for field in Config.__dataclass_fields__.values():
-                    if field.name == _key:
-                        field_type = field.type
+                for _field in Config.__dataclass_fields__.values():
+                    if _field.name == _key:
+                        field_type = _field.type
                         break
                 
                 if field_type == 'Path' or field_type == Path:
@@ -230,5 +276,6 @@ if _override_path.exists():
                     setattr(cfg, _key, float(_val))
                 else:
                     setattr(cfg, _key, _val)
-    except Exception:
-        pass
+    except Exception as e:
+        import logging as _logging
+        _logging.getLogger("FileOrganizer").warning(f"Failed to load config_override.json: {e}")

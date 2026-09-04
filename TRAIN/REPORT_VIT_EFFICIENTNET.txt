@@ -1,0 +1,162 @@
+# Отчёт: ViT-Large 384 и EfficientNet-B1
+
+## Дата: 2026-07-01
+## Модели:
+- ViT-Large: `vit_large_patch16_384` (timm)
+- EfficientNet-B1: `efficientnet_b1` (torchvision)
+
+---
+
+## ViT-Large 384
+
+### Архитектура
+- Vision Transformer Large (307M параметров)
+- Размер входа: 384×384
+- Предобученные веса: IMAGENET1K_V2
+- Additional: attention-механизм для улучшения 0° vs 180°
+
+### Параметры обучения
+- Эпохи: 100 (early stopping на 30)
+- Batch size: 16 (effective: 32 на 2 GPU)
+- Learning rate: 3e-5
+- Weight decay: 0.05
+- LR scheduler: cosine (eta_min=1e-7)
+- Loss: CrossEntropyLoss
+- Аугментация: ROTATION_AUG, VERTICAL_FLIP, SKEW, BORDER
+
+### Результаты
+
+| Метрика | Значение |
+|---------|----------|
+| **Accuracy** | **99.63%** |
+| Ошибок | 11 из 2991 |
+| Время обучения | ~30 мин (30 эпох) |
+| Время инференса | 33.5s |
+| Размер модели | 1.2 GB |
+
+### Per-class метрики
+
+| Класс | Всего | Правильно | Accuracy |
+|-------|-------|-----------|----------|
+| 0° | 1732 | 1727 | 99.71% |
+| 90° | 568 | 564 | 99.30% |
+| 180° | 353 | 351 | 99.43% |
+| 270° | 338 | 338 | **100.00%** |
+
+### Confusion Matrix
+
+```
+         pred:   0°   90°  180°  270°
+  true   0°  [1727    0    4    1]
+  true  90°  [   0  564    0    4]
+  true 180°  [   2    0  351    0]
+  true 270°  [   0    0    0  338]
+```
+
+### Ошибки (11 файлов)
+
+| Класс | Ошибок | Направление |
+|-------|--------|-------------|
+| 0° | 5 | 4 → 180°, 1 → 270° |
+| 90° | 4 | 4 → 270° |
+| 180° | 2 | 2 → 0° |
+| 270° | 0 | — |
+
+---
+
+## EfficientNet-B1
+
+### Архитектура
+- EfficientNet-B1 (7.8M параметров)
+- Размер входа: 240×240
+- Предобученные веса: IMAGENET1K_V2
+
+### Параметры обучения
+- Эпохи: 30 (early stopping)
+- Batch size: 32
+- Learning rate: 1e-4
+- Weight decay: 1e-4
+- LR scheduler: cosine (eta_min=1e-6)
+- Loss: CrossEntropyLoss
+- Аугментация: ROTATION_AUG, VERTICAL_FLIP, SKEW, BORDER
+
+### Результаты
+
+| Метрика | Значение |
+|---------|----------|
+| **Accuracy** | **99.57%** |
+| Ошибок | 13 из 2991 |
+| Время обучения | ~20 мин |
+| Время инференса | 15.8s |
+| Размер модели | 26 MB |
+
+### Per-class метрики
+
+| Класс | Всего | Правильно | Accuracy |
+|-------|-------|-----------|----------|
+| 0° | 1732 | 1724 | 99.54% |
+| 90° | 568 | 567 | 99.82% |
+| 180° | 353 | 349 | 98.87% |
+| 270° | 338 | 338 | **100.00%** |
+
+### Confusion Matrix
+
+```
+         pred:   0°   90°  180°  270°
+  true   0°  [1724    0    7    1]
+  true  90°  [   0  567    0    1]
+  true 180°  [   4    0  349    0]
+  true 270°  [   0    0    0  338]
+```
+
+### Ошибки (13 файлов)
+
+| Класс | Ошибок | Направление |
+|-------|--------|-------------|
+| 0° | 8 | 7 → 180°, 1 → 270° |
+| 90° | 1 | 1 → 270° |
+| 180° | 4 | 4 → 0° |
+| 270° | 0 | — |
+
+---
+
+## Сравнение
+
+| Метрика | ViT-Large | EfficientNet-B1 |
+|---------|-----------|-----------------|
+| **Accuracy** | **99.63%** | 99.57% |
+| Ошибок | 11 | 13 |
+| Время инференса | 33.5s | **15.8s** |
+| Размер модели | 1.2 GB | **26 MB** |
+| Параметры | 307M | 7.8M |
+
+### Преимущества ViT-Large
+- Выше точность (99.63% vs 99.57%)
+- Меньше ошибок на классе 0° (5 vs 8)
+
+### Преимущества EfficientNet-B1
+- В 2 раза быстрее (15.8s vs 33.5s)
+- В 46 раз компактнее (26 MB vs 1.2 GB)
+- Подходит для edge/embedded устройств
+
+---
+
+## Выводы
+
+1. **ViT-Large 384** — лучший выбор для production (99.63%)
+2. **EfficientNet-B1** — альтернатива для ограниченных ресурсов (99.57%)
+3. Обе модели показывают отличные результаты на классе 270° (100%)
+4. Основная путаница: 0° ↔ 180° (симметричные документы)
+
+---
+
+## Файлы
+
+- Скрипт обучения ViT: `2_train.py`
+- Скрипт инференса ViT: `3_test_inference.py`
+- Модель ViT: `D:\FileOrganizer\TRAIN\models\orientation_vit_large_384_best.pth`
+- Отчёт ViT: `D:\FileOrganizer\TRAIN\models\compare_report.json`
+
+- Скрипт обучения EfficientNet: `D:\Yandex.Disk\PYTHON\NLTK\Кластеризация\EfficientNet_TRAIN\2_train.py`
+- Модель EfficientNet: `D:\FileOrganizer\TRAIN\models_efficientnet\orientation_efficientnet_b1_best.pth`
+- Отчёт EfficientNet: `D:\FileOrganizer\TRAIN\models_efficientnet\compare_report.json`

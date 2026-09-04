@@ -5,7 +5,6 @@
 
 import torch
 import numpy as np
-from sklearn.cluster import AgglomerativeClustering
 from collections import defaultdict
 from typing import List, Dict
 
@@ -65,7 +64,7 @@ class ClusterAnalyzer:
 
             clustering = HDBSCAN(
                 metric='cosine',
-                min_cluster_size=max(20, cfg.MIN_CLUSTER_SIZE // 5),
+                min_cluster_size=cfg.MIN_CLUSTER_SIZE,
                 cluster_selection_epsilon=self.distance_threshold,
                 core_dist_n_jobs=-1,
             )
@@ -88,6 +87,8 @@ class ClusterAnalyzer:
 
     def _agglomerative_clustering(self, distance_matrix: np.ndarray) -> np.ndarray:
         """Fallback: AgglomerativeClustering."""
+        from sklearn.cluster import AgglomerativeClustering
+        
         logger.info("Performing Agglomerative Clustering (CPU)...")
 
         clustering = AgglomerativeClustering(

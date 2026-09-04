@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from typing import List, Dict, Optional
 from collections import defaultdict
+
 import numpy as np
 
 from config import cfg
@@ -20,7 +21,8 @@ from logger_utils import logger
 # ===== Lazy import stop_event из main (circular-safe) =====
 def _is_stopped() -> bool:
     from main import stop_event
-    return stop_event.is_set()
+    stop_file = cfg.ROOT / "PipelineData" / "stop.flag"
+    return stop_event.is_set() or stop_file.exists()
 
 
 def _get_pipeline():
@@ -36,7 +38,6 @@ def _get_progress():
 # ===== Глобальное состояние этапа 2 =====
 _extraction_groups: List[Dict] = []
 _current_group_index: int = -1
-_stage2_results: Dict[str, Dict] = {}
 _substage_to_start: Optional[tuple] = None
 _substage_select_event = asyncio.Event()
 _awaiting_substage_select: bool = False
@@ -127,8 +128,6 @@ def _persist_stage2_state() -> None:
 
 def _check_gpu_for_embeddings() -> bool:
     """Проверка доступности GPU и моделей эмбеддингов."""
-    global _gpu_checked
-    
     if hasattr(_check_gpu_for_embeddings, "_checked"):
         return True
     
@@ -206,21 +205,17 @@ def _embed_group_results(group_results: List[Dict]) -> List[Dict]:
         doc_id = d.get("id") or path_to_id.get(src_path)
         tq = d.get("text_quality", "good")
 
-        # Текстовый эмбеддинг (если есть текст)
         if tq in ("good", "poor") and d.get("text") and src_path not in already_text:
             text_inputs.append(d["text"])
             text_indices.append(i)
             text_names.append(file_name)
-            if doc_id:
-                text_doc_ids.append(doc_id)
+            text_doc_ids.append(doc_id)
 
-        # Графический эмбеддинг (если есть изображение, независимо от текста)
         if d.get("image") and src_path not in already_image:
             image_inputs.append(d["image"])
             image_indices.append(i)
             image_names.append(file_name)
-            if doc_id:
-                image_doc_ids.append(doc_id)
+            image_doc_ids.append(doc_id)
 
     if not text_inputs and not image_inputs:
         logger.info("Эмбеддинги: нет новых данных для группы. Пропуск.")
@@ -253,8 +248,9 @@ def _embed_group_results(group_results: List[Dict]) -> List[Dict]:
                     emb = text_emb[local_i]
                     group_results[global_i]["text_embedding"] = emb
                     if np.any(emb):
-                        if text_doc_ids:
-                            valid_doc_ids_t.append(text_doc_ids[start + local_i])
+                        doc_id = text_doc_ids[local_i] if local_i < len(text_doc_ids) else None
+                        if doc_id:
+                            valid_doc_ids_t.append(doc_id)
                             valid_emb_t.append(emb)
                 
                 if db and valid_doc_ids_t:
@@ -284,8 +280,9 @@ def _embed_group_results(group_results: List[Dict]) -> List[Dict]:
                     emb = img_emb[local_i]
                     group_results[global_i]["image_embedding"] = emb
                     if np.any(emb):
-                        if image_doc_ids:
-                            valid_doc_ids.append(image_doc_ids[start + local_i])
+                        doc_id = image_doc_ids[local_i] if local_i < len(image_doc_ids) else None
+                        if doc_id:
+                            valid_doc_ids.append(doc_id)
                             valid_emb.append(emb)
                 
                 if db and valid_doc_ids:
@@ -359,10 +356,11 @@ def _run_extraction_pool(tasks, max_workers, total, group_name: str = "", global
                         )
                         
                         if src.exists():
+                            from file_processor import move_file_to_target, move_file_to_error
                             if res["error"] == "Empty or extraction failed":
-                                new_loc = file_processor.move_file_to_target(src, "failed_extraction")
+                                new_loc = move_file_to_target(src, "failed_extraction")
                             else:
-                                new_loc = file_processor.move_file_to_error(src)
+                                new_loc = move_file_to_error(src)
                             
                             if new_loc:
                                 path_updates.append((res["source"], str(new_loc)))
@@ -468,19 +466,18 @@ def _delete_npy_for_files(file_paths: List[str]) -> None:
     emb_dir = cfg.EMBEDDINGS_DIR
     if not emb_dir.exists():
         return
-    
+
     removed = 0
     for fp in file_paths:
         stem = Path(fp).stem
-        for suffix in (f"{stem}_text.npy", f"{stem}_image.npy"):
-            p = emb_dir / suffix
-            if p.exists():
+        for pattern in (f"{stem}_*_text.npy", f"{stem}_*_image.npy"):
+            for p in emb_dir.glob(pattern):
                 try:
                     p.unlink()
                     removed += 1
                 except Exception:
                     pass
-    
+
     if removed:
         logger.debug(f"Удалено .npy эмбеддингов: {removed}")
 
@@ -542,10 +539,6 @@ async def _run_extraction_substage(file_type: str, sorted_data: List[Dict]) -> N
 
         await loop.run_in_executor(None, _write_extraction_to_db, results, path_updates)
 
-        for r in results:
-            r["type"] = file_type
-            _stage2_results[r["source"]] = r
-
         elapsed = time.time() - start
 
         if _is_stopped():
@@ -602,12 +595,6 @@ async def _run_embeddings_substage(file_type: str, sorted_data: List[Dict]) -> N
 
         docs = _embed_group_results(docs)
 
-        for d in docs:
-            d.setdefault("type", file_type)
-            existing = _stage2_results.get(d["source"], {})
-            existing.update(d)
-            _stage2_results[d["source"]] = existing
-
         elapsed = time.time() - start
 
         if _is_stopped():
@@ -645,23 +632,23 @@ def _rollback_extraction(file_type: str, sorted_data: List[Dict]) -> int:
                 logger.warning(f"Не удалось очистить {tmp_dir}: {e}")
 
     rolled_back = 0
-    
-    format_files = [d for d in sorted_data if d.get("type") == file_type]
-    if not format_files:
-        logger.info(f"Нет файлов формата {file_type} для отката извлечения")
-        for src in [k for k, d in _stage2_results.items() if d.get("type") == file_type]:
-            _stage2_results.pop(src, None)
-        return 0
-    
+
     try:
         db = DatabaseManager()
     except Exception as e:
         logger.error(f"Не удалось подключиться к БД для отката: {e}")
         return 0
-    
+
     try:
-        file_paths = [d["source"] for d in format_files]
-        
+        # Берём актуальные пути из БД по format_type
+        with db.conn.cursor() as cur:
+            cur.execute("SELECT file_path FROM documents WHERE format_type = %s", (file_type,))
+            file_paths = [row[0] for row in cur.fetchall()]
+
+        if not file_paths:
+            logger.info(f"Нет файлов формата {file_type} для отката извлечения")
+            return 0
+
         with db.conn.cursor() as cur:
             # Удаляем эмбеддинги из формат-специфичных таблиц
             from database import DatabaseManager as _db
@@ -673,10 +660,10 @@ def _rollback_extraction(file_type: str, sorted_data: List[Dict]) -> int:
                             SELECT id FROM documents WHERE file_path = ANY(%s)
                         );
                     """, (file_paths,))
-            
+
             # Очищаем извлечение + флаги
             cur.execute("""
-                UPDATE documents 
+                UPDATE documents
                 SET text = NULL, image_path = NULL, error = NULL,
                     enriched_text = NULL, topic = NULL, doc_type = NULL, purpose = NULL,
                     stage_2_done = FALSE, stage_3_done = FALSE,
@@ -684,7 +671,7 @@ def _rollback_extraction(file_type: str, sorted_data: List[Dict]) -> int:
                     updated_at = NOW()
                 WHERE file_path = ANY(%s)
             """, (file_paths,))
-            
+
             db.conn.commit()
             logger.info(f"Очищены данные извлечения и эмбеддингов для формата {file_type}")
 
@@ -695,7 +682,7 @@ def _rollback_extraction(file_type: str, sorted_data: List[Dict]) -> int:
         if not target_dir:
             logger.error(f"Не найдена директория для формата {file_type}")
             return 0
-        
+
         target_dir.mkdir(parents=True, exist_ok=True)
 
         with db.conn.cursor() as cur:
@@ -751,10 +738,6 @@ def _rollback_extraction(file_type: str, sorted_data: List[Dict]) -> int:
         except Exception:
             pass
     
-    # Очищаем накопитель результатов для формата
-    for src in [k for k, d in _stage2_results.items() if d.get("type") == file_type]:
-        _stage2_results.pop(src, None)
-    
     return rolled_back
 
 
@@ -774,27 +757,22 @@ def _rollback_embeddings(file_type: str, sorted_data: List[Dict]) -> int:
             except Exception as e:
                 logger.warning(f"Не удалось очистить {tmp_dir}: {e}")
     
-    format_files = [d for d in sorted_data if d.get("type") == file_type]
-    if not format_files:
-        logger.info(f"Нет файлов формата {file_type} для отката эмбеддингов")
-    
-    file_paths = [d["source"] for d in format_files]
-
     try:
         db = DatabaseManager()
     except Exception as e:
         logger.error(f"Не удалось подключиться к БД для отката эмбеддингов: {e}")
         db = None
-    
+
+    file_paths = []
     if db:
         try:
-            # Берём актуальные пути из БД (файлы могли переместиться)
+            # Берём актуальные пути из БД по format_type
             with db.conn.cursor() as cur:
-                cur.execute("SELECT file_path FROM documents WHERE file_path = ANY(%s)", (file_paths,))
-                db_paths = [row[0] for row in cur.fetchall()] or file_paths
-            
-            _delete_embeddings_db(db, db_paths, file_type)
-            _delete_npy_for_files(db_paths)
+                cur.execute("SELECT file_path FROM documents WHERE format_type = %s", (file_type,))
+                file_paths = [row[0] for row in cur.fetchall()]
+
+            _delete_embeddings_db(db, file_paths, file_type)
+            _delete_npy_for_files(file_paths)
             logger.info(f"Откат эмбеддингов формата {file_type}: очищены векторы и флаги")
         except Exception as e:
             logger.error(f"Ошибка при откате эмбеддингов формата {file_type}: {e}")
@@ -804,13 +782,9 @@ def _rollback_embeddings(file_type: str, sorted_data: List[Dict]) -> int:
             except Exception:
                 pass
     else:
+        # Fallback на sorted_data если БД недоступна
+        file_paths = [d["source"] for d in sorted_data if d.get("type") == file_type]
         _delete_npy_for_files(file_paths)
-
-    # Чистим эмбеддинги в накопителе результатов, сохраняя извлечённый текст
-    for d in _stage2_results.values():
-        if d.get("type") == file_type:
-            d.pop("text_embedding", None)
-            d.pop("image_embedding", None)
 
     return len(file_paths)
 
@@ -834,6 +808,13 @@ async def _await_substage_selection() -> Optional[tuple]:
     logger.info("Ожидание выбора подэтапа этапа 2 через web-интерфейс...")
 
     while _substage_to_start is None and not _is_stopped():
+        # Отложенный запрос мог быть установлен ПОСЛЕ проверки _pending_substage выше,
+        # но ДО того как мы вошли в цикл (race condition между web-запросом и потоком
+        # пайплайна). Проверяем _pending_substage на каждой итерации.
+        if _pending_substage is not None:
+            _substage_to_start = _pending_substage
+            _pending_substage = None
+            break
         await asyncio.sleep(1.0)
 
     _awaiting_substage_select = False
@@ -878,11 +859,9 @@ def select_substage_to_start(format_type: str, substage: str) -> bool:
 
 async def run_stage_2_process_formats(sorted_data: List[Dict]) -> List[Dict]:
     """Этап 2: обработка форматов раздельными подэтапами."""
-    global _extraction_groups, _current_group_index, _stage2_results
+    global _extraction_groups, _current_group_index
     
     import time
-    
-    _stage2_results = {}
 
     logger.info(f"Файлов для обработки (из sorted_data): {len(sorted_data)}")
 
@@ -906,7 +885,7 @@ async def run_stage_2_process_formats(sorted_data: List[Dict]) -> List[Dict]:
 
     if not _extraction_groups:
         logger.warning("Нет групп форматов для обработки на этапе 2.")
-        return list(_stage2_results.values())
+        return []
 
     logger.info(f"Групп форматов: {len(_extraction_groups)}")
     for g in _extraction_groups:
@@ -970,7 +949,7 @@ async def run_stage_2_process_formats(sorted_data: List[Dict]) -> List[Dict]:
         db.close()
     except Exception as e:
         logger.warning(f"Не удалось загрузить данные из БД для возврата: {e}")
-        final_results = list(_stage2_results.values())
+        final_results = []
 
     logger.info(f"Итого результатов этапа 2: {len(final_results)}")
     return final_results

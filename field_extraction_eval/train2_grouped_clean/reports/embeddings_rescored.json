@@ -1,0 +1,184 @@
+[
+ {
+  "labels": "dirty",
+  "variant": "giga_480m",
+  "acc_grouped": 0.7247090420769919,
+  "acc_singletons": 0.9005763688760807,
+  "acc_inGroups": 0.6454545454545455
+ },
+ {
+  "labels": "dirty",
+  "variant": "qwen3e_4b",
+  "acc_grouped": 0.8357206803939122,
+  "acc_singletons": 0.8760806916426513,
+  "acc_inGroups": 0.8175324675324676
+ },
+ {
+  "labels": "dirty",
+  "variant": "nomic_v2",
+  "acc_grouped": 0.7179946284691137,
+  "acc_singletons": 0.8832853025936599,
+  "acc_inGroups": 0.6435064935064935
+ },
+ {
+  "labels": "dirty",
+  "variant": "e5_large",
+  "acc_grouped": 0.6871083258728737,
+  "acc_singletons": 0.8659942363112392,
+  "acc_inGroups": 0.6064935064935065
+ },
+ {
+  "labels": "dirty",
+  "variant": "bge_m3",
+  "acc_grouped": 0.6575649059982095,
+  "acc_singletons": 0.8746397694524496,
+  "acc_inGroups": 0.5597402597402598
+ },
+ {
+  "labels": "dirty",
+  "variant": "char_tfidf_svd_512",
+  "acc_grouped": 0.7690241718889884,
+  "acc_singletons": 0.8342939481268011,
+  "acc_inGroups": 0.7396103896103896
+ },
+ {
+  "labels": "dirty",
+  "variant": "giga_3b",
+  "acc_grouped": 0.7538048343777977,
+  "acc_singletons": 0.8097982708933718,
+  "acc_inGroups": 0.7285714285714285
+ },
+ {
+  "labels": "dirty",
+  "variant": "qwen3e_06b",
+  "acc_grouped": 0.6060877350044763,
+  "acc_singletons": 0.8227665706051873,
+  "acc_inGroups": 0.5084415584415585
+ },
+ {
+  "labels": "dirty",
+  "variant": "nomic_v15",
+  "acc_grouped": 0.6557743957027753,
+  "acc_singletons": 0.7809798270893372,
+  "acc_inGroups": 0.5993506493506493
+ },
+ {
+  "labels": "dirty",
+  "variant": "char_raw_4096",
+  "acc_grouped": 0.7412712623097583,
+  "acc_singletons": 0.7939481268011528,
+  "acc_inGroups": 0.7175324675324676
+ },
+ {
+  "labels": "dirty",
+  "variant": "rubert_base_dp",
+  "acc_grouped": 0.5819158460161146,
+  "acc_singletons": 0.6887608069164265,
+  "acc_inGroups": 0.5337662337662338
+ },
+ {
+  "labels": "dirty",
+  "variant": "sbert_ru",
+  "acc_grouped": 0.5841539838854073,
+  "acc_singletons": 0.7492795389048992,
+  "acc_inGroups": 0.5097402597402597
+ },
+ {
+  "labels": "dirty",
+  "variant": "rubert_tiny2",
+  "acc_grouped": 0.6696508504923904,
+  "acc_singletons": 0.6945244956772334,
+  "acc_inGroups": 0.6584415584415585
+ },
+ {
+  "labels": "clean",
+  "variant": "giga_480m",
+  "acc_grouped": 0.7323187108325873,
+  "acc_singletons": 0.9164265129682997,
+  "acc_inGroups": 0.6493506493506493
+ },
+ {
+  "labels": "clean",
+  "variant": "qwen3e_4b",
+  "acc_grouped": 0.8446732318710832,
+  "acc_singletons": 0.8804034582132565,
+  "acc_inGroups": 0.8285714285714286
+ },
+ {
+  "labels": "clean",
+  "variant": "nomic_v2",
+  "acc_grouped": 0.7153088630259624,
+  "acc_singletons": 0.8948126801152738,
+  "acc_inGroups": 0.6344155844155844
+ },
+ {
+  "labels": "clean",
+  "variant": "e5_large",
+  "acc_grouped": 0.693822739480752,
+  "acc_singletons": 0.8688760806916427,
+  "acc_inGroups": 0.6149350649350649
+ },
+ {
+  "labels": "clean",
+  "variant": "bge_m3",
+  "acc_grouped": 0.6741271262309758,
+  "acc_singletons": 0.8760806916426513,
+  "acc_inGroups": 0.5831168831168831
+ },
+ {
+  "labels": "clean",
+  "variant": "char_tfidf_svd_512",
+  "acc_grouped": 0.7900626678603402,
+  "acc_singletons": 0.8631123919308358,
+  "acc_inGroups": 0.7571428571428571
+ },
+ {
+  "labels": "clean",
+  "variant": "giga_3b",
+  "acc_grouped": 0.7761862130707251,
+  "acc_singletons": 0.8472622478386167,
+  "acc_inGroups": 0.7441558441558441
+ },
+ {
+  "labels": "clean",
+  "variant": "qwen3e_06b",
+  "acc_grouped": 0.6257833482542524,
+  "acc_singletons": 0.8501440922190202,
+  "acc_inGroups": 0.5246753246753246
+ },
+ {
+  "labels": "clean",
+  "variant": "nomic_v15",
+  "acc_grouped": 0.6714413607878246,
+  "acc_singletons": 0.792507204610951,
+  "acc_inGroups": 0.6168831168831169
+ },
+ {
+  "labels": "clean",
+  "variant": "char_raw_4096",
+  "acc_grouped": 0.7591763652641003,
+  "acc_singletons": 0.8170028818443804,
+  "acc_inGroups": 0.7331168831168832
+ },
+ {
+  "labels": "clean",
+  "variant": "rubert_base_dp",
+  "acc_grouped": 0.6038495971351835,
+  "acc_singletons": 0.7262247838616714,
+  "acc_inGroups": 0.5487012987012987
+ },
+ {
+  "labels": "clean",
+  "variant": "sbert_ru",
+  "acc_grouped": 0.6060877350044763,
+  "acc_singletons": 0.7881844380403458,
+  "acc_inGroups": 0.5240259740259741
+ },
+ {
+  "labels": "clean",
+  "variant": "rubert_tiny2",
+  "acc_grouped": 0.6974037600716204,
+  "acc_singletons": 0.7334293948126801,
+  "acc_inGroups": 0.6811688311688312
+ }
+]

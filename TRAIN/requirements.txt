@@ -1,0 +1,29 @@
+# Vision Transformer для определения ориентации сканов документов
+# Оптимизировано для 2x NVIDIA RTX PRO 4000 48GB VRAM
+
+# Core ML frameworks
+torch >= 2.1.0
+torchvision >= 0.16.0
+timm >= 0.9.0          # PyTorch Image Models (ViT models)
+
+# Data processing
+Pillow >= 10.0.0
+numpy >= 1.24.0
+opencv-python-headless >= 4.8.0
+
+# Augmentation
+albumentations >= 1.3.0
+
+# Progress tracking
+tqdm >= 4.65.0
+
+# Visualization (для review_app.py)
+Pillow >= 10.0.0       # ImageTk для tkinter
+
+# Optional: for distributed training
+torch.distributed      # встроена в torch
+
+# Development tools
+black >= 23.0.0        # форматирование кода
+flake8 >= 6.0.0        # linting
+mypy >= 1.5.0          # type checking

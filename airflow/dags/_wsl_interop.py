@@ -59,3 +59,28 @@ def runner_bash_command(
         for key, val in params.items():
             parts.append(f'--param {key}="{val}"')
     return " ".join(parts)
+
+
+def script_bash_command(script_relpath: str, args: list[str] | None = None) -> str:
+    """Строит bash-команду запуска произвольного .py скрипта проекта через WSL-interop.
+
+    В отличие от runner_bash_command (которая запускает airflow.experiments.runner
+    с variants framework), эта функция вызывает скрипт напрямую — полезно для
+    автономных runners в stage2_scripts/, уже содержащих всю логику (pool, БД,
+    откат) и не зависящих от variants/<stage>/<subformat>/<variant>/entry.py.
+
+    Args:
+        script_relpath: путь к скрипту относительно корня проекта
+            (напр. 'stage2_scripts/stage2_excel_xlsx.py').
+        args: список аргументов командной строки (напр. ['extract']).
+
+    Returns:
+        Строка bash_command для BashOperator. Значения Jinja Airflow отрендерит.
+    """
+    parts = [
+        f'cd {_q(PROJECT_DIR_WSL)} &&',
+        f'{_q(WIN_PYTHON)} {script_relpath}',
+    ]
+    if args:
+        parts.extend(args)
+    return " ".join(parts)

@@ -1,7 +1,9 @@
 """paths.py — пути файловой системы для исследовательских прогонов.
 
 Структура:
-    D:\\FileOrganizer\\SourceFiles\\                # immutable источник (182k файлов)
+    D:\\FileOrganizer\\SourceFiles\\                # источник, восстанавливается из эталона
+    D:\\FileOrganizer\\SourceFiles_golden\\         # ЭТАЛОН источника — immutable snapshot
+        *.xlsx, *.pdf, ...
     D:\\FileOrganizer\\Sorted_golden\\              # золотой выход Stage 1, общий на все прогоны
         PDF_Text\\
         Word_Docx\\
@@ -24,6 +26,7 @@ from config import cfg
 
 EXPERIMENTS_ROOT = cfg.ROOT / "Experiments"
 SORTED_GOLDEN_ROOT = cfg.ROOT / "Sorted_golden"
+SOURCE_GOLDEN_ROOT = cfg.ROOT / "SourceFiles_golden"
 
 
 def experiments_root() -> Path:
@@ -78,6 +81,21 @@ def gold_sorted_subformat_dir(subformat: str) -> Path:
     if rel is None:
         rel = subformat
     return SORTED_GOLDEN_ROOT / rel
+
+
+def gold_source_dir() -> Path:
+    """Путь к эталонному источнику (SourceFiles_golden/).
+
+    Эталон создаётся при первом прогоне golden_stage1_run из D:\\FileOrganizer\\SourceFiles\\
+    (если он был непуст), и затем на каждом следующем прогоне SourceFiles/ восстанавливается
+    из SourceFiles_golden/ — это гарантирует детерминированный вход dag.
+    """
+    return SOURCE_GOLDEN_ROOT
+
+
+def ensure_gold_source_root() -> Path:
+    SOURCE_GOLDEN_ROOT.mkdir(parents=True, exist_ok=True)
+    return SOURCE_GOLDEN_ROOT
 
 
 def ensure_exp_dirs(run_id: str) -> Path:
