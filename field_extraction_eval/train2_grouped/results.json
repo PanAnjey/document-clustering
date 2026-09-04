@@ -1,0 +1,1365 @@
+{
+ "seeds": [
+  42,
+  123,
+  2024
+ ],
+ "per_seed": {
+  "42": {
+   "zeroshot": {
+    "n": 432,
+    "acc": 0.5092592592592593,
+    "acc_singleton": 0.6690140845070423,
+    "n_singleton": 142,
+    "acc_ingroup": 0.43103448275862066,
+    "n_ingroup": 290,
+    "macro_f1": 0.4328224673241557,
+    "per_class": {
+     "AcceptanceCertificate": {
+      "n": 39,
+      "recall": 0.20512820512820512,
+      "precision": 0.7272727272727273,
+      "f1": 0.32
+     },
+     "ActDisagreement": {
+      "n": 3,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "CertificateRegistry": {
+      "n": 16,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "Claim": {
+      "n": 2,
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "f1": 0.8
+     },
+     "Contract": {
+      "n": 45,
+      "recall": 0.4222222222222222,
+      "precision": 0.8636363636363636,
+      "f1": 0.5671641791044777
+     },
+     "ContractAppendix": {
+      "n": 14,
+      "recall": 0.7857142857142857,
+      "precision": 0.5,
+      "f1": 0.6111111111111112
+     },
+     "Letter": {
+      "n": 9,
+      "recall": 0.1111111111111111,
+      "precision": 0.2,
+      "f1": 0.14285714285714285
+     },
+     "Notification": {
+      "n": 30,
+      "recall": 1.0,
+      "precision": 0.8108108108108109,
+      "f1": 0.8955223880597014
+     },
+     "PowerOfAttorney": {
+      "n": 26,
+      "recall": 1.0,
+      "precision": 0.9629629629629629,
+      "f1": 0.9811320754716981
+     },
+     "PriceListAgreement": {
+      "n": 14,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "ProformaInvoice": {
+      "n": 47,
+      "recall": 0.8936170212765957,
+      "precision": 0.28,
+      "f1": 0.4263959390862945
+     },
+     "ReconciliationAct": {
+      "n": 34,
+      "recall": 1.0,
+      "precision": 0.85,
+      "f1": 0.9189189189189189
+     },
+     "ServiceDetails": {
+      "n": 39,
+      "recall": 0.358974358974359,
+      "precision": 0.2916666666666667,
+      "f1": 0.3218390804597701
+     },
+     "SupplementaryAgreement": {
+      "n": 39,
+      "recall": 0.6923076923076923,
+      "precision": 0.5510204081632653,
+      "f1": 0.6136363636363635
+     },
+     "Torg12": {
+      "n": 71,
+      "recall": 0.07042253521126761,
+      "precision": 0.625,
+      "f1": 0.12658227848101267
+     },
+     "TrustConnectionRequest": {
+      "n": 4,
+      "recall": 0.25,
+      "precision": 0.16666666666666666,
+      "f1": 0.2
+     }
+    },
+    "top_confusions": [
+     [
+      [
+       "Torg12",
+       "ProformaInvoice"
+      ],
+      64
+     ],
+     [
+      [
+       "ServiceDetails",
+       "ProformaInvoice"
+      ],
+      22
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ProformaInvoice"
+      ],
+      17
+     ],
+     [
+      [
+       "Contract",
+       "SupplementaryAgreement"
+      ],
+      15
+     ],
+     [
+      [
+       "PriceListAgreement",
+       "ServiceDetails"
+      ],
+      10
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ServiceDetails"
+      ],
+      8
+     ],
+     [
+      [
+       "CertificateRegistry",
+       "ServiceDetails"
+      ],
+      7
+     ],
+     [
+      [
+       "Letter",
+       "Notification"
+      ],
+      7
+     ],
+     [
+      [
+       "CertificateRegistry",
+       "ContractAppendix"
+      ],
+      6
+     ],
+     [
+      [
+       "ProformaInvoice",
+       "ServiceDetails"
+      ],
+      5
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "ServiceDetails"
+      ],
+      4
+     ],
+     [
+      [
+       "CertificateRegistry",
+       "Torg12"
+      ],
+      3
+     ]
+    ]
+   },
+   "finetuned": {
+    "n": 432,
+    "acc": 0.6921296296296297,
+    "acc_singleton": 0.8802816901408451,
+    "n_singleton": 142,
+    "acc_ingroup": 0.6,
+    "n_ingroup": 290,
+    "macro_f1": 0.6503982467101215,
+    "per_class": {
+     "AcceptanceCertificate": {
+      "n": 39,
+      "recall": 0.8974358974358975,
+      "precision": 0.32710280373831774,
+      "f1": 0.4794520547945205
+     },
+     "ActDisagreement": {
+      "n": 3,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "CertificateRegistry": {
+      "n": 16,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "Claim": {
+      "n": 2,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "Contract": {
+      "n": 45,
+      "recall": 0.4888888888888889,
+      "precision": 0.6666666666666666,
+      "f1": 0.5641025641025641
+     },
+     "ContractAppendix": {
+      "n": 14,
+      "recall": 0.7142857142857143,
+      "precision": 0.8333333333333334,
+      "f1": 0.7692307692307692
+     },
+     "Letter": {
+      "n": 9,
+      "recall": 1.0,
+      "precision": 0.8181818181818182,
+      "f1": 0.9
+     },
+     "Notification": {
+      "n": 30,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "PowerOfAttorney": {
+      "n": 26,
+      "recall": 1.0,
+      "precision": 0.9629629629629629,
+      "f1": 0.9811320754716981
+     },
+     "PriceListAgreement": {
+      "n": 14,
+      "recall": 0.21428571428571427,
+      "precision": 1.0,
+      "f1": 0.35294117647058826
+     },
+     "ProformaInvoice": {
+      "n": 47,
+      "recall": 1.0,
+      "precision": 0.9791666666666666,
+      "f1": 0.9894736842105264
+     },
+     "ReconciliationAct": {
+      "n": 34,
+      "recall": 1.0,
+      "precision": 0.918918918918919,
+      "f1": 0.9577464788732395
+     },
+     "ServiceDetails": {
+      "n": 39,
+      "recall": 0.7948717948717948,
+      "precision": 0.6078431372549019,
+      "f1": 0.6888888888888889
+     },
+     "SupplementaryAgreement": {
+      "n": 39,
+      "recall": 0.8717948717948718,
+      "precision": 0.6181818181818182,
+      "f1": 0.723404255319149
+     },
+     "Torg12": {
+      "n": 71,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "TrustConnectionRequest": {
+      "n": 4,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     }
+    },
+    "top_confusions": [
+     [
+      [
+       "Torg12",
+       "AcceptanceCertificate"
+      ],
+      66
+     ],
+     [
+      [
+       "Contract",
+       "SupplementaryAgreement"
+      ],
+      19
+     ],
+     [
+      [
+       "PriceListAgreement",
+       "ServiceDetails"
+      ],
+      11
+     ],
+     [
+      [
+       "ServiceDetails",
+       "AcceptanceCertificate"
+      ],
+      5
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "Contract"
+      ],
+      5
+     ],
+     [
+      [
+       "Torg12",
+       "ServiceDetails"
+      ],
+      4
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ServiceDetails"
+      ],
+      3
+     ],
+     [
+      [
+       "ActDisagreement",
+       "ReconciliationAct"
+      ],
+      3
+     ],
+     [
+      [
+       "ServiceDetails",
+       "Contract"
+      ],
+      3
+     ],
+     [
+      [
+       "TrustConnectionRequest",
+       "ServiceDetails"
+      ],
+      2
+     ],
+     [
+      [
+       "Contract",
+       "ContractAppendix"
+      ],
+      2
+     ],
+     [
+      [
+       "ContractAppendix",
+       "Contract"
+      ],
+      2
+     ]
+    ]
+   }
+  },
+  "123": {
+   "zeroshot": {
+    "n": 445,
+    "acc": 0.6089887640449438,
+    "acc_singleton": 0.6458333333333334,
+    "n_singleton": 144,
+    "acc_ingroup": 0.5913621262458472,
+    "n_ingroup": 301,
+    "macro_f1": 0.5046460974697263,
+    "per_class": {
+     "AcceptanceCertificate": {
+      "n": 34,
+      "recall": 0.058823529411764705,
+      "precision": 0.6666666666666666,
+      "f1": 0.10810810810810811
+     },
+     "ActDisagreement": {
+      "n": 4,
+      "recall": 1.0,
+      "precision": 0.36363636363636365,
+      "f1": 0.5333333333333333
+     },
+     "CertificateRegistry": {
+      "n": 14,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "Claim": {
+      "n": 2,
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.6666666666666666
+     },
+     "Contract": {
+      "n": 46,
+      "recall": 0.7608695652173914,
+      "precision": 0.9210526315789473,
+      "f1": 0.8333333333333333
+     },
+     "ContractAppendix": {
+      "n": 8,
+      "recall": 0.75,
+      "precision": 0.4,
+      "f1": 0.5217391304347827
+     },
+     "Letter": {
+      "n": 9,
+      "recall": 0.2222222222222222,
+      "precision": 0.6666666666666666,
+      "f1": 0.3333333333333333
+     },
+     "Notification": {
+      "n": 30,
+      "recall": 1.0,
+      "precision": 0.967741935483871,
+      "f1": 0.9836065573770492
+     },
+     "PowerOfAttorney": {
+      "n": 38,
+      "recall": 1.0,
+      "precision": 0.9743589743589743,
+      "f1": 0.9870129870129869
+     },
+     "PriceListAgreement": {
+      "n": 14,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "ProformaInvoice": {
+      "n": 54,
+      "recall": 0.8703703703703703,
+      "precision": 0.3533834586466165,
+      "f1": 0.5026737967914437
+     },
+     "ReconciliationAct": {
+      "n": 35,
+      "recall": 1.0,
+      "precision": 0.8536585365853658,
+      "f1": 0.9210526315789475
+     },
+     "ServiceDetails": {
+      "n": 41,
+      "recall": 0.9512195121951219,
+      "precision": 0.4936708860759494,
+      "f1": 0.65
+     },
+     "SupplementaryAgreement": {
+      "n": 43,
+      "recall": 0.5581395348837209,
+      "precision": 0.7272727272727273,
+      "f1": 0.6315789473684211
+     },
+     "Torg12": {
+      "n": 69,
+      "recall": 0.08695652173913043,
+      "precision": 0.6,
+      "f1": 0.15189873417721517
+     },
+     "TrustConnectionRequest": {
+      "n": 4,
+      "recall": 0.25,
+      "precision": 0.25,
+      "f1": 0.25
+     }
+    },
+    "top_confusions": [
+     [
+      [
+       "Torg12",
+       "ProformaInvoice"
+      ],
+      60
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ProformaInvoice"
+      ],
+      14
+     ],
+     [
+      [
+       "PriceListAgreement",
+       "ServiceDetails"
+      ],
+      10
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "ServiceDetails"
+      ],
+      8
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ActDisagreement"
+      ],
+      7
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "ProformaInvoice"
+      ],
+      6
+     ],
+     [
+      [
+       "CertificateRegistry",
+       "ServiceDetails"
+      ],
+      6
+     ],
+     [
+      [
+       "ProformaInvoice",
+       "ServiceDetails"
+      ],
+      6
+     ],
+     [
+      [
+       "Contract",
+       "SupplementaryAgreement"
+      ],
+      5
+     ],
+     [
+      [
+       "CertificateRegistry",
+       "ContractAppendix"
+      ],
+      5
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ServiceDetails"
+      ],
+      5
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ReconciliationAct"
+      ],
+      5
+     ]
+    ]
+   },
+   "finetuned": {
+    "n": 445,
+    "acc": 0.6584269662921348,
+    "acc_singleton": 0.8333333333333334,
+    "n_singleton": 144,
+    "acc_ingroup": 0.574750830564784,
+    "n_ingroup": 301,
+    "macro_f1": 0.6098359970239147,
+    "per_class": {
+     "AcceptanceCertificate": {
+      "n": 34,
+      "recall": 0.5,
+      "precision": 0.6071428571428571,
+      "f1": 0.5483870967741935
+     },
+     "ActDisagreement": {
+      "n": 4,
+      "recall": 0.5,
+      "precision": 1.0,
+      "f1": 0.6666666666666666
+     },
+     "CertificateRegistry": {
+      "n": 14,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "Claim": {
+      "n": 2,
+      "recall": 1.0,
+      "precision": 0.4,
+      "f1": 0.5714285714285715
+     },
+     "Contract": {
+      "n": 46,
+      "recall": 0.8913043478260869,
+      "precision": 0.640625,
+      "f1": 0.7454545454545454
+     },
+     "ContractAppendix": {
+      "n": 8,
+      "recall": 0.75,
+      "precision": 0.8571428571428571,
+      "f1": 0.7999999999999999
+     },
+     "Letter": {
+      "n": 9,
+      "recall": 0.4444444444444444,
+      "precision": 0.25,
+      "f1": 0.32
+     },
+     "Notification": {
+      "n": 30,
+      "recall": 0.6333333333333333,
+      "precision": 1.0,
+      "f1": 0.7755102040816326
+     },
+     "PowerOfAttorney": {
+      "n": 38,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "PriceListAgreement": {
+      "n": 14,
+      "recall": 0.21428571428571427,
+      "precision": 0.75,
+      "f1": 0.3333333333333333
+     },
+     "ProformaInvoice": {
+      "n": 54,
+      "recall": 1.0,
+      "precision": 0.8852459016393442,
+      "f1": 0.9391304347826086
+     },
+     "ReconciliationAct": {
+      "n": 35,
+      "recall": 1.0,
+      "precision": 0.9459459459459459,
+      "f1": 0.9722222222222222
+     },
+     "ServiceDetails": {
+      "n": 41,
+      "recall": 0.8780487804878049,
+      "precision": 0.2926829268292683,
+      "f1": 0.43902439024390244
+     },
+     "SupplementaryAgreement": {
+      "n": 43,
+      "recall": 0.4883720930232558,
+      "precision": 0.84,
+      "f1": 0.6176470588235294
+     },
+     "Torg12": {
+      "n": 69,
+      "recall": 0.014492753623188406,
+      "precision": 1.0,
+      "f1": 0.02857142857142857
+     },
+     "TrustConnectionRequest": {
+      "n": 4,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     }
+    },
+    "top_confusions": [
+     [
+      [
+       "Torg12",
+       "ServiceDetails"
+      ],
+      57
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "Contract"
+      ],
+      20
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ServiceDetails"
+      ],
+      15
+     ],
+     [
+      [
+       "Notification",
+       "Letter"
+      ],
+      11
+     ],
+     [
+      [
+       "PriceListAgreement",
+       "ServiceDetails"
+      ],
+      11
+     ],
+     [
+      [
+       "Torg12",
+       "AcceptanceCertificate"
+      ],
+      8
+     ],
+     [
+      [
+       "Contract",
+       "SupplementaryAgreement"
+      ],
+      4
+     ],
+     [
+      [
+       "Torg12",
+       "ProformaInvoice"
+      ],
+      3
+     ],
+     [
+      [
+       "Letter",
+       "Claim"
+      ],
+      3
+     ],
+     [
+      [
+       "ServiceDetails",
+       "AcceptanceCertificate"
+      ],
+      3
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ProformaInvoice"
+      ],
+      2
+     ],
+     [
+      [
+       "TrustConnectionRequest",
+       "ServiceDetails"
+      ],
+      2
+     ]
+    ]
+   }
+  },
+  "2024": {
+   "zeroshot": {
+    "n": 441,
+    "acc": 0.5147392290249433,
+    "acc_singleton": 0.625,
+    "n_singleton": 144,
+    "acc_ingroup": 0.4612794612794613,
+    "n_ingroup": 297,
+    "macro_f1": 0.41992138061837747,
+    "per_class": {
+     "AcceptanceCertificate": {
+      "n": 35,
+      "recall": 0.05714285714285714,
+      "precision": 1.0,
+      "f1": 0.1081081081081081
+     },
+     "ActDisagreement": {
+      "n": 3,
+      "recall": 0.3333333333333333,
+      "precision": 0.14285714285714285,
+      "f1": 0.2
+     },
+     "CertificateRegistry": {
+      "n": 16,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "Claim": {
+      "n": 2,
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.6666666666666666
+     },
+     "Contract": {
+      "n": 62,
+      "recall": 0.5483870967741935,
+      "precision": 0.9714285714285714,
+      "f1": 0.7010309278350515
+     },
+     "ContractAppendix": {
+      "n": 8,
+      "recall": 0.375,
+      "precision": 0.2,
+      "f1": 0.26086956521739135
+     },
+     "Letter": {
+      "n": 9,
+      "recall": 0.2222222222222222,
+      "precision": 0.4,
+      "f1": 0.2857142857142857
+     },
+     "Notification": {
+      "n": 30,
+      "recall": 1.0,
+      "precision": 0.8571428571428571,
+      "f1": 0.923076923076923
+     },
+     "PowerOfAttorney": {
+      "n": 24,
+      "recall": 1.0,
+      "precision": 0.9230769230769231,
+      "f1": 0.9600000000000001
+     },
+     "PriceListAgreement": {
+      "n": 14,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     },
+     "ProformaInvoice": {
+      "n": 47,
+      "recall": 0.8936170212765957,
+      "precision": 0.28187919463087246,
+      "f1": 0.4285714285714285
+     },
+     "ReconciliationAct": {
+      "n": 34,
+      "recall": 1.0,
+      "precision": 0.7906976744186046,
+      "f1": 0.8831168831168831
+     },
+     "ServiceDetails": {
+      "n": 38,
+      "recall": 0.42105263157894735,
+      "precision": 0.32,
+      "f1": 0.3636363636363636
+     },
+     "SupplementaryAgreement": {
+      "n": 46,
+      "recall": 0.6739130434782609,
+      "precision": 0.5849056603773585,
+      "f1": 0.6262626262626263
+     },
+     "Torg12": {
+      "n": 69,
+      "recall": 0.07246376811594203,
+      "precision": 0.625,
+      "f1": 0.12987012987012989
+     },
+     "TrustConnectionRequest": {
+      "n": 4,
+      "recall": 0.25,
+      "precision": 0.14285714285714285,
+      "f1": 0.18181818181818182
+     }
+    },
+    "top_confusions": [
+     [
+      [
+       "Torg12",
+       "ProformaInvoice"
+      ],
+      64
+     ],
+     [
+      [
+       "ServiceDetails",
+       "ProformaInvoice"
+      ],
+      22
+     ],
+     [
+      [
+       "Contract",
+       "SupplementaryAgreement"
+      ],
+      20
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ProformaInvoice"
+      ],
+      17
+     ],
+     [
+      [
+       "PriceListAgreement",
+       "ServiceDetails"
+      ],
+      10
+     ],
+     [
+      [
+       "CertificateRegistry",
+       "ServiceDetails"
+      ],
+      9
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "ContractAppendix"
+      ],
+      7
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ReconciliationAct"
+      ],
+      6
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ActDisagreement"
+      ],
+      6
+     ],
+     [
+      [
+       "Letter",
+       "Notification"
+      ],
+      5
+     ],
+     [
+      [
+       "ProformaInvoice",
+       "ServiceDetails"
+      ],
+      5
+     ],
+     [
+      [
+       "Contract",
+       "TrustConnectionRequest"
+      ],
+      4
+     ]
+    ]
+   },
+   "finetuned": {
+    "n": 441,
+    "acc": 0.7392290249433107,
+    "acc_singleton": 0.8611111111111112,
+    "n_singleton": 144,
+    "acc_ingroup": 0.6801346801346801,
+    "n_ingroup": 297,
+    "macro_f1": 0.6927677469998476,
+    "per_class": {
+     "AcceptanceCertificate": {
+      "n": 35,
+      "recall": 0.45714285714285713,
+      "precision": 0.8888888888888888,
+      "f1": 0.6037735849056604
+     },
+     "ActDisagreement": {
+      "n": 3,
+      "recall": 0.3333333333333333,
+      "precision": 1.0,
+      "f1": 0.5
+     },
+     "CertificateRegistry": {
+      "n": 16,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "Claim": {
+      "n": 2,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "Contract": {
+      "n": 62,
+      "recall": 0.6451612903225806,
+      "precision": 0.9302325581395349,
+      "f1": 0.761904761904762
+     },
+     "ContractAppendix": {
+      "n": 8,
+      "recall": 0.25,
+      "precision": 0.4,
+      "f1": 0.3076923076923077
+     },
+     "Letter": {
+      "n": 9,
+      "recall": 1.0,
+      "precision": 0.9,
+      "f1": 0.9473684210526316
+     },
+     "Notification": {
+      "n": 30,
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0
+     },
+     "PowerOfAttorney": {
+      "n": 24,
+      "recall": 1.0,
+      "precision": 0.96,
+      "f1": 0.9795918367346939
+     },
+     "PriceListAgreement": {
+      "n": 14,
+      "recall": 0.21428571428571427,
+      "precision": 1.0,
+      "f1": 0.35294117647058826
+     },
+     "ProformaInvoice": {
+      "n": 47,
+      "recall": 0.9361702127659575,
+      "precision": 0.7857142857142857,
+      "f1": 0.854368932038835
+     },
+     "ReconciliationAct": {
+      "n": 34,
+      "recall": 1.0,
+      "precision": 0.8717948717948718,
+      "f1": 0.9315068493150686
+     },
+     "ServiceDetails": {
+      "n": 38,
+      "recall": 0.8421052631578947,
+      "precision": 0.34408602150537637,
+      "f1": 0.48854961832061067
+     },
+     "SupplementaryAgreement": {
+      "n": 46,
+      "recall": 0.8695652173913043,
+      "precision": 0.6349206349206349,
+      "f1": 0.7339449541284404
+     },
+     "Torg12": {
+      "n": 69,
+      "recall": 0.4782608695652174,
+      "precision": 0.8918918918918919,
+      "f1": 0.6226415094339622
+     },
+     "TrustConnectionRequest": {
+      "n": 4,
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0
+     }
+    },
+    "top_confusions": [
+     [
+      [
+       "Torg12",
+       "ServiceDetails"
+      ],
+      31
+     ],
+     [
+      [
+       "Contract",
+       "SupplementaryAgreement"
+      ],
+      21
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "ServiceDetails"
+      ],
+      16
+     ],
+     [
+      [
+       "PriceListAgreement",
+       "ServiceDetails"
+      ],
+      11
+     ],
+     [
+      [
+       "Torg12",
+       "ProformaInvoice"
+      ],
+      5
+     ],
+     [
+      [
+       "ServiceDetails",
+       "ProformaInvoice"
+      ],
+      5
+     ],
+     [
+      [
+       "ProformaInvoice",
+       "ReconciliationAct"
+      ],
+      3
+     ],
+     [
+      [
+       "ContractAppendix",
+       "AcceptanceCertificate"
+      ],
+      2
+     ],
+     [
+      [
+       "AcceptanceCertificate",
+       "Torg12"
+      ],
+      2
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "ContractAppendix"
+      ],
+      2
+     ],
+     [
+      [
+       "TrustConnectionRequest",
+       "Contract"
+      ],
+      2
+     ],
+     [
+      [
+       "SupplementaryAgreement",
+       "ServiceDetails"
+      ],
+      2
+     ]
+    ]
+   }
+  }
+ },
+ "aggregate": {
+  "zeroshot": {
+   "acc": {
+    "mean": 0.5443290841097155,
+    "min": 0.5092592592592593,
+    "max": 0.6089887640449438,
+    "sd": 0.045775999345747644,
+    "seeds": [
+     0.5092592592592593,
+     0.6089887640449438,
+     0.5147392290249433
+    ]
+   },
+   "acc_singleton": {
+    "mean": 0.6466158059467918,
+    "min": 0.625,
+    "max": 0.6690140845070423,
+    "sd": 0.01797719122094019,
+    "seeds": [
+     0.6690140845070423,
+     0.6458333333333334,
+     0.625
+    ]
+   },
+   "acc_ingroup": {
+    "mean": 0.49455869009464304,
+    "min": 0.43103448275862066,
+    "max": 0.5913621262458472,
+    "sd": 0.06955510342858491,
+    "seeds": [
+     0.43103448275862066,
+     0.5913621262458472,
+     0.4612794612794613
+    ]
+   },
+   "macro_f1": {
+    "mean": 0.45246331513741983,
+    "min": 0.41992138061837747,
+    "max": 0.5046460974697263,
+    "sd": 0.037272792476578775,
+    "seeds": [
+     0.4328224673241557,
+     0.5046460974697263,
+     0.41992138061837747
+    ]
+   }
+  },
+  "finetuned": {
+   "acc": {
+    "mean": 0.696595206955025,
+    "min": 0.6584269662921348,
+    "max": 0.7392290249433107,
+    "sd": 0.033138086911224766,
+    "seeds": [
+     0.6921296296296297,
+     0.6584269662921348,
+     0.7392290249433107
+    ]
+   },
+   "acc_singleton": {
+    "mean": 0.8582420448617633,
+    "min": 0.8333333333333334,
+    "max": 0.8802816901408451,
+    "sd": 0.01927365572638326,
+    "seeds": [
+     0.8802816901408451,
+     0.8333333333333334,
+     0.8611111111111112
+    ]
+   },
+   "acc_ingroup": {
+    "mean": 0.6182951702331547,
+    "min": 0.574750830564784,
+    "max": 0.6801346801346801,
+    "sd": 0.044925671042569164,
+    "seeds": [
+     0.6,
+     0.574750830564784,
+     0.6801346801346801
+    ]
+   },
+   "macro_f1": {
+    "mean": 0.6510006635779613,
+    "min": 0.6098359970239147,
+    "max": 0.6927677469998476,
+    "sd": 0.03385942476455317,
+    "seeds": [
+     0.6503982467101215,
+     0.6098359970239147,
+     0.6927677469998476
+    ]
+   }
+  }
+ },
+ "per_class": [
+  {
+   "class": "AcceptanceCertificate",
+   "n_test_mean": 36.0,
+   "recall_zeroshot": 0.10703153056094232,
+   "recall_finetuned": 0.6181929181929182
+  },
+  {
+   "class": "ActDisagreement",
+   "n_test_mean": 3.3333333333333335,
+   "recall_zeroshot": 0.4444444444444444,
+   "recall_finetuned": 0.27777777777777773
+  },
+  {
+   "class": "CertificateRegistry",
+   "n_test_mean": 15.333333333333334,
+   "recall_zeroshot": 0.0,
+   "recall_finetuned": 1.0
+  },
+  {
+   "class": "Claim",
+   "n_test_mean": 2.0,
+   "recall_zeroshot": 1.0,
+   "recall_finetuned": 1.0
+  },
+  {
+   "class": "Contract",
+   "n_test_mean": 51.0,
+   "recall_zeroshot": 0.5771596280712691,
+   "recall_finetuned": 0.6751181756791854
+  },
+  {
+   "class": "ContractAppendix",
+   "n_test_mean": 10.0,
+   "recall_zeroshot": 0.6369047619047619,
+   "recall_finetuned": 0.5714285714285715
+  },
+  {
+   "class": "Letter",
+   "n_test_mean": 9.0,
+   "recall_zeroshot": 0.1851851851851852,
+   "recall_finetuned": 0.8148148148148149
+  },
+  {
+   "class": "Notification",
+   "n_test_mean": 30.0,
+   "recall_zeroshot": 1.0,
+   "recall_finetuned": 0.8777777777777778
+  },
+  {
+   "class": "PowerOfAttorney",
+   "n_test_mean": 29.333333333333332,
+   "recall_zeroshot": 1.0,
+   "recall_finetuned": 1.0
+  },
+  {
+   "class": "PriceListAgreement",
+   "n_test_mean": 14.0,
+   "recall_zeroshot": 0.0,
+   "recall_finetuned": 0.21428571428571427
+  },
+  {
+   "class": "ProformaInvoice",
+   "n_test_mean": 49.333333333333336,
+   "recall_zeroshot": 0.8858681376411872,
+   "recall_finetuned": 0.9787234042553191
+  },
+  {
+   "class": "ReconciliationAct",
+   "n_test_mean": 34.333333333333336,
+   "recall_zeroshot": 1.0,
+   "recall_finetuned": 1.0
+  },
+  {
+   "class": "ServiceDetails",
+   "n_test_mean": 39.333333333333336,
+   "recall_zeroshot": 0.5770821675828094,
+   "recall_finetuned": 0.838341946172498
+  },
+  {
+   "class": "SupplementaryAgreement",
+   "n_test_mean": 42.666666666666664,
+   "recall_zeroshot": 0.641453423556558,
+   "recall_finetuned": 0.7432440607364773
+  },
+  {
+   "class": "Torg12",
+   "n_test_mean": 69.66666666666667,
+   "recall_zeroshot": 0.07661427502211336,
+   "recall_finetuned": 0.1642512077294686
+  },
+  {
+   "class": "TrustConnectionRequest",
+   "n_test_mean": 4.0,
+   "recall_zeroshot": 0.25,
+   "recall_finetuned": 0.0
+  }
+ ]
+}

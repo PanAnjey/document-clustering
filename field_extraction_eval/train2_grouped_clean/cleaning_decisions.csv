@@ -1,0 +1,92 @@
+folder,ensemble,votes,filename_type,llm,decision,basename
+ActDisagreement,Contract,11,ActDisagreement,ActDisagreement,delete,81c83be0-d93d-4549-9181-dc2ec87a4d2a.Протокол разногласий к договору 884084883.pdf
+ContractAppendix,ServiceDetails,12,,ServiceDetails,relabel:ServiceDetails,5c818eb8-07b4-47b1-9423-8571712a9e92.отчет июнь.pdf
+ContractAppendix,SupplementaryAgreement,12,,ContractAppendix,delete,cf9be7b3-41a0-416d-89c1-803b196e5d8f.Приложение 1 к ДС 1 (форма Акта)  копия.pdf
+ContractAppendix,Letter,11,,ContractAppendix,delete,1b9dc689-5a00-4108-bb5d-3381461b6ec4.схема.pdf
+ContractAppendix,SupplementaryAgreement,11,,ContractAppendix,delete,ee91c3f3-9ba0-4ab7-8408-6b36931498a6.Приложение 9 к договору (форма Акта на LAN).pdf
+ContractAppendix,SupplementaryAgreement,10,SupplementaryAgreement,ContractAppendix,relabel:SupplementaryAgreement,b36c6f9b-c504-4c00-b2a7-8cffb0c7f809.Приложение 3  к Дополнительному соглашению от 01 октября 2025 г.  .pdf
+ContractAppendix,SupplementaryAgreement,9,,ContractAppendix,delete,25d4f11a-a7f7-4f6c-b9a9-8df271c2d1c9.ДС №3_Extra_NKA_Pyaterochka_Instore digital_Prostokvashino_Actibio_Danissimo_12_2025 (1).pdf
+ContractAppendix,SupplementaryAgreement,9,ContractAppendix,ContractAppendix,delete,8ac05748-0fca-49bf-aaec-cb26e32ba654.приложение №8 к договору.pdf
+Letter,TrustConnectionRequest,13,Letter,CertificateRegistry,delete,58b24f8e-1fcc-46ab-918e-1f17348970df.Письмо о смене юр.адреса и кпп.pdf
+Letter,TrustConnectionRequest,13,,CertificateRegistry,delete,b41c5da6-fba6-4282-9b38-92920327f37e.Лист записи ЕГРЮЛ.PDF
+Letter,TrustConnectionRequest,13,Notification,Notification,delete,ec4a1e58-8fc8-446a-9e0e-231d65828322.Уведомление о смене юридического адреса_ООО Макстори.pdf
+Letter,TrustConnectionRequest,12,Notification,Notification,delete,17a5655c-08a5-4e71-8ea1-0a8ec5f7fa33.Уведомление о смене юридического адреса ООО АМПЕРКИН.pdf
+Letter,ContractAppendix,11,,TrustConnectionRequest,delete,e1038f8c-8716-4ab2-9e7d-08851e2bfd58.Заявление на предоставление персональных данных_ИТ (1) (2) (1).pdf
+Letter,SupplementaryAgreement,11,,SupplementaryAgreement,relabel:SupplementaryAgreement,e52ae9a9-de62-45ae-b00b-b5a76a158e16.ДС_вкл.БССС_46459b348bc63-d724-4d15-b73c-6850f15a1764.pdf
+Letter,SupplementaryAgreement,10,,SupplementaryAgreement,relabel:SupplementaryAgreement,2d00d28e-116a-4ab4-adbf-3ff467cce140.262 Вымпелком..pdf
+Letter,SupplementaryAgreement,10,,SupplementaryAgreement,relabel:SupplementaryAgreement,7053dc58-9f91-4dfc-b8fc-23a18e6c11f5.Договор_(122)f2f5a58d-03cc-4ddb-bf7a-dd6389a6823a(1)44ecd079-e437-49a7-897a-7e99a7820d19.pdf
+Letter,ContractAppendix,9,,TrustConnectionRequest,delete,5a6fcb55-dd49-4822-aaf5-e869bc265785.ЗАЯВЛЕНИЕ подключении ЛК ЭТИКЕТКА МКК КАНГАРИЯ 835606510 от 26.04.2022.docx
+PowerOfAttorney,Letter,11,PowerOfAttorney,PowerOfAttorney,delete,7f3afb95-4806-4a40-ae15-a75baf076d3e.Доверенность для забора оборудования.pdf
+PowerOfAttorney,Letter,10,,PowerOfAttorney,delete,49a74e34-9811-4299-8b36-9ce35b72ae46.b2cc-3245-doverennost-выход.pdf
+PowerOfAttorney,Letter,9,PowerOfAttorney,PowerOfAttorney,delete,"c93aee7d-2074-45e7-a27e-d523179ca73e.Доверенность ЛогЛаб 2025 - Никитин, Костромин.pdf"
+PriceListAgreement,ProformaInvoice,9,,ProformaInvoice,relabel:ProformaInvoice,04ab31b1-15c9-4681-99ff-eb4cf1912af4.КП СР  канцелярия Тверь Калинина 15 (1).pdf
+PriceListAgreement,ProformaInvoice,9,,ProformaInvoice,relabel:ProformaInvoice,e99a0335-e88e-4efc-80cb-774a7f28e7a7.КП СР  канцелярия Тверь Коминтерна 47 (2).pdf
+ServiceDetails,Torg12,9,,ProformaInvoice,delete,483a995e-c469-442f-a5ae-2c056e7e28b4.УПД 28.02.26 № 7143-3445-01 = 351 013.64 в т.ч. НДС 63 297.54.pdf
+ServiceDetails,AcceptanceCertificate,9,,ServiceDetails,delete,5c148ed4-d15e-4079-8d0c-73deeefcc5de.ВымпелКом апрель ведомость.pdf
+ServiceDetails,Torg12,9,,ProformaInvoice,delete,7db5f8d0-1343-4789-a608-1cb685483625.УПД 31.03.26 № 7143-5287-01 = 305 278.65 в т.ч. НДС 55 050.25.pdf
+ServiceDetails,AcceptanceCertificate,9,,ServiceDetails,delete,82ac9d4a-f453-48a6-8065-e4aa47e099b5.02 Февраль 2026.pdf
+ServiceDetails,Torg12,9,,ProformaInvoice,delete,a9fae433-e4ab-47f6-8a08-9469d8401988.УПД 31.05.26 № 7143-9000-01 = 332 431.69 в т.ч. НДС 59 946.70.pdf
+SupplementaryAgreement,ContractAppendix,13,SupplementaryAgreement,ContractAppendix,relabel:ContractAppendix,0ab777cf-a896-4fb1-8689-1535e8e75cf0.Дополнительное соглашение №б_н от 04.02.26 Вымпелком (Билайн) активация SIM карт 9057241298 _ 9057241300 _ 9057241301 ВЫМПЕЛКОМ ПАО с ПРОФМАСТЕР ООО.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,0e75c7a5-007d-4c93-a1c5-9b160f91d1a2.Проект договора ЗП 11472931 22.04.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,ContractAppendix,ContractAppendix,relabel:ContractAppendix,29c3b19b-aa85-4dfc-8ba2-53cdc73930bb.Приложение от 16.02.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,30ba28b8-c3ee-4655-9194-0b77aadf2d93.Проект договора ЗП 11467434 14.04.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,45bc06df-d21e-479e-a13a-7f9cbde074d4.Проект договора ЗП 11494531 25.02.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,710ff11d-a644-4596-9afb-e045155c4394.Проект договора ЗП 11509486 08.06.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,7e6d12a8-93b7-45c2-b26f-3e6251a21f0c.Проект договора ЗП 11491629 18.05.2025.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,80e7ac14-f839-4d7f-9ea0-96ce71ba6b88.Проект договора ЗП 11498568 25.05.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,9f07ab5c-37e4-4c4c-bc16-7f9b986be1a0.Проект договора ЗП 11459146 02.04.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,df99d1ac-5be5-4f81-96c1-511a6de76e35.Проект договора ЗП 11505293 01.06.2026.pdf
+SupplementaryAgreement,ContractAppendix,13,,ContractAppendix,relabel:ContractAppendix,e8cdd51a-f2b4-436b-b00c-85282ecb31aa.Проект договора ЗП 11476547 23.04.2026.pdf
+SupplementaryAgreement,ContractAppendix,12,,ContractAppendix,relabel:ContractAppendix,59847979-a28c-4830-8885-2ea7e9254a49.Приложение Маркировка U89ZQ.pdf
+SupplementaryAgreement,ContractAppendix,12,,ContractAppendix,relabel:ContractAppendix,60e77045-37b5-4680-aad0-9885e9ba6fa2.Проект договора ЗП 11509792 08.06.2026.pdf
+SupplementaryAgreement,Contract,12,,TrustConnectionRequest,delete,c3cd78a6-d64d-4a49-aedb-3cd8268c92c3.Соглашение ЭДО.pdf
+SupplementaryAgreement,ContractAppendix,11,,ContractAppendix,relabel:ContractAppendix,3f7b2437-7e56-4a12-983c-e6a7116d8c44.Проект договора ЗП 11473241 23.04.2025.pdf
+SupplementaryAgreement,ContractAppendix,11,ContractAppendix,ContractAppendix,relabel:ContractAppendix,b951ca8b-1f09-40a6-9894-4ba1bdf965bc.Дата тариф и ТП голос и 850362744 Приложение к договору.pdf
+SupplementaryAgreement,ContractAppendix,11,,PriceListAgreement,delete,e531864e-7845-443a-9f4e-bc60998058b9.Приложение на этикетку КСС.pdf
+SupplementaryAgreement,ContractAppendix,10,,ContractAppendix,relabel:ContractAppendix,3ecf6240-422d-4e79-ab75-7c18a1fed71c.Проект договора ЗП 11491810 18.05.2026.pdf
+SupplementaryAgreement,ContractAppendix,10,,ContractAppendix,relabel:ContractAppendix,75c3abcf-a85d-4a02-bb72-427dbb1067ee.Проект договора ЗП 11466475 12.03.2026.pdf
+SupplementaryAgreement,ContractAppendix,10,,ContractAppendix,relabel:ContractAppendix,c6811b0c-96de-4f94-8e26-e6cbf63264de.Приложение тариф MKAR_X.pdf
+SupplementaryAgreement,Contract,9,,SupplementaryAgreement,delete,0e308331-d28c-4d73-82a5-f74d2d64a895.UM5SO_ДС_улучшение.pdf
+SupplementaryAgreement,Contract,9,,SupplementaryAgreement,delete,66b87d96-6215-4ee4-863d-305418966707.Проект договора ЗП 11462573 15.03.2026.pdf
+SupplementaryAgreement,ContractAppendix,9,,ContractAppendix,relabel:ContractAppendix,bb9cb749-e7b2-495d-a6c6-4110b9583e60.Проект договора ЗП 11420013 13.02.2025.pdf
+SupplementaryAgreement,ContractAppendix,9,,ContractAppendix,relabel:ContractAppendix,cfab05fd-463c-462a-afeb-2694a0c03d9e.Проект договора ЗП 11449521 24.03.2026.pdf
+SupplementaryAgreement,Contract,9,,SupplementaryAgreement,delete,d83ec075-faeb-4456-ab1e-18a297833d1f.Соглашение о передача прав и обязанностей по договору (002) (1).pdf
+SupplementaryAgreement,ContractAppendix,9,,TrustConnectionRequest,delete,dfdb37cc-182e-4680-9e16-c226055e5b34.БЗ_4146447 (с штрихкодом).pdf
+Torg12,AcceptanceCertificate,11,,AcceptanceCertificate,relabel:AcceptanceCertificate,42a21161-bc01-412f-aca2-a3699e186cd7.Накладная №4_ВМПК     от 30.04.2025.pdf
+Torg12,AcceptanceCertificate,11,,ServiceDetails,delete,7653e3c0-abe9-4fd1-b62a-6feb71e99443.Накладная №11_ВМПК от 30.11.2025.pdf
+Torg12,AcceptanceCertificate,11,,AcceptanceCertificate,relabel:AcceptanceCertificate,9e660542-1466-4ae4-94dd-19f9e803cf54.Накладная №3_ВМПК     от 31.03.2025.pdf
+Torg12,AcceptanceCertificate,10,,AcceptanceCertificate,relabel:AcceptanceCertificate,af3c3bb5-94da-4188-848f-0d75408c5980.Накладная №10_ВМПК     от 31.10.2025.pdf
+Torg12,AcceptanceCertificate,10,,ServiceDetails,delete,c3842767-473e-4037-9af5-813b1f4c659b.Накладная №7_ВМПК     от 31.07.2025.pdf
+Torg12,AcceptanceCertificate,10,,ServiceDetails,delete,d63dde6e-6be6-4133-8d6c-2ec4d3c8eb74.Накладная №3_ВМПК_1   от 31.03.2025.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,251f700e-29f5-4671-9282-b20f7e38788a.УПД (статус 2) № 54 от 31 декабря 2024 г.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,2659b26f-f47a-4b15-8c76-8ffccc0ca393.УПД 7 от 31.01.26 - 84 912.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,49555204-8dc6-45db-b118-d1a1a54d625c.УПД 31 от 28.02.26 - 10 909.92 р ндс 1 967.36  р.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,61652133-48bc-4b95-b141-bf1f26f71b36.УПД 25 от 31.01.26 - 13850.70.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,89dd6781-68d7-4080-811e-068abe7f7bd6.УПД (статус 1) № 162 от 04 июля 2025 г.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,b2be55f7-281d-49e8-b0fe-8f4d727cd3ca.УПД 32 от 28.02.26 - 55 288.23р ндс 9 959.19  р.pdf
+Torg12,AcceptanceCertificate,9,,ProformaInvoice,delete,e0b5ccb9-3736-411f-80f9-0527db6edee9.Счет-фактура № 102 от 31 марта 2025 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,08b45a09-2101-48a8-813e-d4ee298f74a3.Акт сверки взаиморасчетов № 63 от 03 марта 2025 г.pdf
+TrustConnectionRequest,ProformaInvoice,13,ProformaInvoice,ProformaInvoice,relabel:ProformaInvoice,17d6f238-089d-49fb-881b-bb4392edd93a.Счет на оплату № 31 от 20 августа 2025 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,,ReconciliationAct,relabel:ReconciliationAct,194904c1-5fde-4d29-b908-caa7e798a586.ВЫМПЕЛКОМ.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,22b223c0-4e46-4565-80ee-136f1c29f21b.Акт сверки взаиморасчетов № 3 от 25 февраля 2026 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,276e5d55-3d4e-424a-9be2-865b110ec2e4.Акт сверки взаиморасчетов № 9 от 11 июня 2025 г.pdf
+TrustConnectionRequest,ProformaInvoice,13,ProformaInvoice,ProformaInvoice,relabel:ProformaInvoice,4aef0c34-0786-4f19-ac7d-d911120325a2.Счет № 67 от 18.05.26.pdf
+TrustConnectionRequest,Letter,13,Letter,TrustConnectionRequest,relabel:Letter,4afda98f-1522-458f-8888-d54fc24e4761.Письмо о смене оператора ЭДО.pdf
+TrustConnectionRequest,ProformaInvoice,13,ProformaInvoice,ProformaInvoice,relabel:ProformaInvoice,72f92a84-03f5-41c6-9f5e-3f004319ecab.Счет на оплату № 4 от 18 мая 2026 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,7a75cdde-fc60-43d8-b585-a60b210e2ee4.Акт сверки взаиморасчетов № 173 от 30 октября 2025 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,874a384d-81ba-404c-bd2b-5eac9ea87ca0.Акт сверки взаиморасчетов № 106 от 10 февраля 2025 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,88f2ae33-b2b1-4005-9703-91d30c5fe516.Акт сверки взаиморасчетов № 512 от 06 октября 2025 г.pdf
+TrustConnectionRequest,Contract,13,,Contract,relabel:Contract,8b46a93f-85d7-495f-bba5-90bcecebee57.Договор Вымпелком.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,a7be2376-f40a-44f8-9886-6f550b4deb91.Акт сверки взаиморасчетов № 8 от 20 ноября 2024 г (1).pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,d78b368d-d326-4974-8f83-e0d1c07d0f21.Акт сверки взаиморасчетов № 302 от 13 марта 2026 г.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,db64ff5f-6e63-4ca8-8378-468a167628d8.Акт сверки Вымпелком.pdf
+TrustConnectionRequest,ReconciliationAct,13,ReconciliationAct,ReconciliationAct,relabel:ReconciliationAct,fc738159-9bca-49e4-b5cc-235d1dea66a9.Акт сверки взаиморасчетов № 316 от 14 января 2026 г.pdf
+TrustConnectionRequest,ReconciliationAct,12,,ReconciliationAct,relabel:ReconciliationAct,38a21ca8-2e9d-45d2-858e-0d2354511f78.ОООТатАСУ_31122024_990054    _ПАОВымпелКомМоскваг_АСУР1718от23012017возмезд.pdf
+TrustConnectionRequest,ReconciliationAct,11,,ReconciliationAct,relabel:ReconciliationAct,2fd15197-6520-4861-b75d-5bf141b6e2b6.сверка.pdf
+TrustConnectionRequest,ProformaInvoice,11,,Notification,delete,3df6ffd0-518b-40b1-aa09-e9ac4103b9ba.Вымпелком 05.06.2023г._ платежка.pdf
+TrustConnectionRequest,Letter,11,,Notification,delete,6fa8a65e-347c-44d9-90e7-8545fc891c81.Изменение ЭДО АРТ.pdf
+TrustConnectionRequest,Contract,11,,TrustConnectionRequest,delete,841eca16-e6d0-4334-9df5-1067c886daf4.Оферта ЭДО Озон Хабаровск.pdf
+TrustConnectionRequest,Contract,11,,Letter,delete,a5e971b6-0517-44fb-a44e-167b8ae68688.view-offer (2).pdf
+TrustConnectionRequest,Contract,11,,TrustConnectionRequest,delete,fcb7fa98-14da-4933-b6e9-b381324eb1ef.Соглашение об ЭДО.pdf
+TrustConnectionRequest,Letter,10,ReconciliationAct,ReconciliationAct,delete,eb382cae-69bf-4665-8aa3-2cc5ed4b122d.Запрос на сверку взаиморасчетов между ООО ФМ-Вектор - ПАО Вымпелком.pdf
+TrustConnectionRequest,Passport,9,Notification,CertificateRegistry,delete,2d871d5f-3e57-48cf-baf8-c7ded3e721d7.Уведомление о реорганизации.pdf

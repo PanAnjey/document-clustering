@@ -389,3 +389,10 @@ TRAIN/**/*.pth
 TRAIN/**/*.npy
 EfficientNet_TRAIN/**/*.pth
 MobileNetV3_TRAIN/**/*.pth
+# grouped fine-tuning experiment (field_extraction_eval/train2_grouped*):
+# track code + reports, drop heavy / sensitive artifacts
+field_extraction_eval/**/lora_seed*/
+field_extraction_eval/**/node_modules/
+field_extraction_eval/**/*.npy
+field_extraction_eval/**/pool.jsonl
+field_extraction_eval/**/_starmap_datauri.txt
