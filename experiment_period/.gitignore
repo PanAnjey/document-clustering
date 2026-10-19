@@ -1,0 +1,10 @@
+# данные выборок, предсказания, логи и окружение с реальными строками счетов не коммитятся
+eval*.json
+rows400.json
+train.json
+xml_lines*.txt
+errors_*.json
+pred_*.json
+log_*.txt
+.venv_dp/
+__pycache__/
